@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Extend product form to add Shopify stock fields and Export Stock button -->
+    <record id="view_product_product_form_shopify_stock" model="ir.ui.view">
+        <field name="name">product.product.form.shopify.stock</field>
+        <field name="model">product.product</field>
+        <field name="inherit_id" ref="product.product_normal_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet/notebook/page[@name='inventory']" position="inside">
+                <group string="Shopify Stock Export">
+                    <group>
+                        <field name="shopify_stock_type"/>
+                        <field name="shopify_stock_value"/>
+                    </group>
+                    <group>
+                        <button name="action_shopify_export_stock"
+                                type="object"
+                                string="Export Stock to Shopify"
+                                class="oe_highlight"/>
+                    </group>
+                </group>
+            </xpath>
+            <xpath expr="//sheet/notebook" position="inside">
+                <page string="Shopify" name="shopify_connector">
+                    <group string="Shopify Mapping">
+                        <group>
+                            <field name="shopify_product_id"/>
+                            <field name="shopify_variant_id"/>
+                        </group>
+                        <group>
+                            <button name="action_shopify_update_product"
+                                    type="object"
+                                    string="Update on Shopify"
+                                    class="btn-primary"/>
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>
+

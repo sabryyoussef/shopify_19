@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 200">
+  <defs>
+    <linearGradient id="rs-bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#1f2937" />
+      <stop offset="1" stop-color="#020617" />
+    </linearGradient>
+    <linearGradient id="rs-odoo" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#ec4899" />
+      <stop offset="1" stop-color="#fb7185" />
+    </linearGradient>
+    <linearGradient id="rs-shopify" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#22c55e" />
+      <stop offset="1" stop-color="#4ade80" />
+    </linearGradient>
+  </defs>
+
+  <rect x="0" y="0" width="480" height="200" rx="20" fill="url(#rs-bg)" />
+
+  <!-- Odoo credit note -->
+  <g transform="translate(40,64)">
+    <polygon points="0,26 44,0 128,0 84,26"
+             fill="#020617" stroke="#f472b6" stroke-width="1.2" />
+    <rect x="0" y="26" width="84" height="64"
+          fill="url(#rs-odoo)" stroke="#f472b6" stroke-width="1.1" />
+    <polygon points="84,26 128,0 128,64 84,90"
+             fill="#020617" stroke="#f472b6" stroke-width="1.1" />
+    <text x="12" y="48" font-size="11" fill="#fdf2ff">Odoo</text>
+    <text x="12" y="64" font-size="10" fill="#fecdd3">Credit Note</text>
+    <rect x="10" y="72" width="58" height="10" rx="5" fill="#0b1120" />
+    <text x="39" y="79" font-size="7" fill="#fee2e2" text-anchor="middle">
+      INV/2024/00123
+    </text>
+  </g>
+
+  <!-- Refund API block -->
+  <g transform="translate(190,76)">
+    <rect x="0" y="0" width="80" height="56" rx="12"
+          fill="#020617" stroke="#38bdf8" stroke-width="1.2" />
+    <text x="40" y="24" font-size="10" fill="#e0f2fe" text-anchor="middle">
+      Refund API
+    </text>
+    <text x="40" y="38" font-size="8" fill="#9ca3af" text-anchor="middle">
+      Connector
+    </text>
+  </g>
+
+  <!-- Shopify refund -->
+  <g transform="translate(320,64)">
+    <polygon points="0,26 44,0 128,0 84,26"
+             fill="#020617" stroke="#22c55e" stroke-width="1.2" />
+    <rect x="0" y="26" width="84" height="64"
+          fill="url(#rs-shopify)" stroke="#22c55e" stroke-width="1.1" />
+    <polygon points="84,26 128,0 128,64 84,90"
+             fill="#020617" stroke="#22c55e" stroke-width="1.1" />
+    <text x="12" y="48" font-size="11" fill="#ecfdf5">Shopify</text>
+    <text x="12" y="64" font-size="10" fill="#bbf7d0">Refund</text>
+    <rect x="10" y="72" width="58" height="10" rx="5" fill="#022c22" />
+    <text x="39" y="79" font-size="7" fill="#bbf7d0" text-anchor="middle">
+      Refunded
+    </text>
+  </g>
+
+  <!-- Flow arrows -->
+  <g>
+    <line x1="172" y1="104" x2="190" y2="104"
+          stroke="#e5e7eb" stroke-width="1.4" stroke-dasharray="4 3" />
+    <polygon points="189,100 198,104 189,108" fill="#e5e7eb" />
+
+    <line x1="270" y1="104" x2="320" y2="104"
+          stroke="#e5e7eb" stroke-width="1.4" stroke-dasharray="4 3" />
+    <polygon points="319,100 328,104 319,108" fill="#e5e7eb" />
+
+    <text x="240" y="160" font-size="9" fill="#e5e7eb" text-anchor="middle">
+      Odoo credit notes pushed to Shopify as refund records
+    </text>
+  </g>
+</svg>
+

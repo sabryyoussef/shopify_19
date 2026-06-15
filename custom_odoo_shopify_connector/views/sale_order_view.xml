@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_sale_order_form_shopify_cancel" model="ir.ui.view">
+        <field name="name">sale.order.form.shopify.cancel</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_open_shopify_cancel_wizard"
+                        type="object"
+                        string="Cancel on Shopify"
+                        class="btn-secondary"
+                        invisible="state != 'cancel' or not shopify_order_id or shopify_cancelled"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>
+

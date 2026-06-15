@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="seq_shopify_price_update_queue" model="ir.sequence">
+        <field name="name">Shopify Price Update Queue</field>
+        <field name="code">shopify.price.update.queue</field>
+        <field name="prefix">SPQ</field>
+        <field name="padding">5</field>
+        <field name="number_next">1</field>
+        <field name="implementation">no_gap</field>
+    </record>
+
+</odoo>
+

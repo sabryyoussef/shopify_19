@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Default automatic validation workflow -->
+    <record id="shopify_sale_auto_workflow_automatic_validation" model="shopify.sale.auto.workflow">
+        <field name="name">Automatic Validation</field>
+        <field name="confirm_quotation">1</field>
+        <field name="create_invoice">1</field>
+        <field name="validate_invoice">1</field>
+        <field name="register_payment">1</field>
+        <field name="force_accounting_date">1</field>
+        <field name="shipment_policy">deliver_each_product</field>
+    </record>
+
+</odoo>
+

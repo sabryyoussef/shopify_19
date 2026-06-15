@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Convenience parameters to display webhook endpoints in Technical settings -->
+        <record id="ir_config_parameter_shopify_webhook_order_cancelled_path" model="ir.config_parameter">
+            <field name="key">odoo_shopify_connector_pro.webhook.order_cancelled_path</field>
+            <field name="value">/shopify/webhook/order_cancelled</field>
+        </record>
+        <record id="ir_config_parameter_shopify_webhook_refund_created_path" model="ir.config_parameter">
+            <field name="key">odoo_shopify_connector_pro.webhook.refund_created_path</field>
+            <field name="value">/shopify/webhook/refund_created</field>
+        </record>
+    </data>
+</odoo>
+

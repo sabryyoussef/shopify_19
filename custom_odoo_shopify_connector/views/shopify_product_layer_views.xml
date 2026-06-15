@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Shopify Product Layer: list -->
+    <record id="view_shopify_product_layer_list" model="ir.ui.view">
+        <field name="name">shopify.product.layer.list</field>
+        <field name="model">shopify.product.layer</field>
+        <field name="arch" type="xml">
+            <list string="Shopify Product Layer" decoration-success="state == 'exported'" decoration-muted="state == 'draft'">
+                <field name="product_tmpl_id"/>
+                <field name="store_id"/>
+                <field name="shopify_product_id"/>
+                <field name="state" widget="badge" decoration-success="state == 'exported'" decoration-info="state == 'draft'"/>
+                <field name="publish_status"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Shopify Product Layer: form (edit before export) -->
+    <record id="view_shopify_product_layer_form" model="ir.ui.view">
+        <field name="name">shopify.product.layer.form</field>
+        <field name="model">shopify.product.layer</field>
+        <field name="arch" type="xml">
+            <form string="Shopify Product">
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_export_to_shopify" type="object" class="btn-primary" string="Export to Shopify"
+                                invisible="state == 'exported'"/>
+                    </div>
+                    <group>
+                        <group string="Product &amp; Store">
+                            <field name="product_tmpl_id" readonly="1"/>
+                            <field name="store_id" readonly="1"/>
+                            <field name="shopify_product_id" readonly="1"/>
+                            <field name="state" readonly="1"/>
+                            <field name="publish_status" readonly="1"/>
+                        </group>
+                    </group>
+                    <group string="Edit Before Export" invisible="state == 'exported'">
+                        <group colspan="2">
+                            <field name="description_override" placeholder="Override description for Shopify (optional). Leave empty to use product description."/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Prepare for Export wizard -->
+    <record id="action_shopify_prepare_export_wizard" model="ir.actions.act_window">
+        <field name="name">Shopify Prepare Product for Export</field>
+        <field name="res_model">shopify.prepare.export.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="product.model_product_template"/>
+    </record>
+
+    <record id="view_shopify_prepare_export_wizard_form" model="ir.ui.view">
+        <field name="name">shopify.prepare.export.wizard.form</field>
+        <field name="model">shopify.prepare.export.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Prepare Product for Export">
+                <sheet>
+                    <div class="text-muted small mb-2">
+                        Use this wizard to create or refresh product-layer records before final export to Shopify.
+                    </div>
+                    <separator string="Step 1: Select Destination Store"/>
+                    <group class="mt-2 mb-2" col="1">
+                        <field name="store_id"
+                               string="Shopify Store"
+                               required="1"
+                               options="{'no_create': True}"
+                               help="Store where the selected product(s) will be prepared for export."/>
+                    </group>
+                    <separator string="Step 2: Review Result"/>
+                    <div class="alert alert-light border mb-0" role="alert">
+                        <div class="fw-semibold mb-1">What happens next</div>
+                        <div class="small text-muted">
+                            The system will create or update Shopify product-layer records for the selected products.
+                            You can review those records and then run the export wizard.
+                        </div>
+                    </div>
+                </sheet>
+                <footer>
+                    <button name="action_prepare" string="Prepare Product Layer" type="object" class="btn-primary"/>
+                    <button string="Close" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Export to Shopify wizard (4 sections) -->
+    <record id="action_shopify_export_wizard" model="ir.actions.act_window">
+        <field name="name">Export New Products in Shopify</field>
+        <field name="res_model">shopify.export.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="product.model_product_template"/>
+    </record>
+
+    <record id="view_shopify_export_wizard_form" model="ir.ui.view">
+        <field name="name">shopify.export.wizard.form</field>
+        <field name="model">shopify.export.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Export Products to Shopify">
+                <sheet>
+                    <div class="text-muted small mb-2">
+                        Configure what data should be sent to Shopify for this export run.
+                    </div>
+                    <separator string="Step 1: Select Store and Products"/>
+                    <group class="mt-2 mb-2" col="1">
+                        <field name="store_id"
+                               string="Shopify Store"
+                               required="1"
+                               options="{'no_create': True}"
+                               help="Store where selected products will be exported."/>
+                        <field name="product_tmpl_ids"
+                               string="Products"
+                               widget="many2many_tags"
+                               options="{'no_create': True}"
+                               help="Products to export in this run."/>
+                        <field name="force_export"
+                               string="Force Export (Re-export even if unchanged)"
+                               help="Enable to re-send product data even when no change is detected."/>
+                    </group>
+                    <separator string="Step 2: Configure Export Data"/>
+                    <notebook>
+                        <page string="1. Set Basic Details" name="basic">
+                            <div class="text-muted small mb-2">
+                                Choose which core product attributes should be pushed to Shopify.
+                            </div>
+                            <group>
+                                <group>
+                                    <field name="export_name" help="Enable to export product names."/>
+                                    <field name="export_description" help="Enable to export product descriptions."/>
+                                </group>
+                                <group>
+                                    <field name="export_tags" help="Enable to export Shopify tags."/>
+                                    <field name="export_categories" help="Enable to export product categories/collections."/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="2. Set Price" name="price">
+                            <group>
+                                <field name="export_price" help="Enable to export product prices."/>
+                            </group>
+                            <p class="text-muted">Product price will be taken from the pricelist configured on the selected Shopify store.</p>
+                        </page>
+                        <page string="3. Set Image" name="image">
+                            <group>
+                                <field name="export_image" help="Enable to export main product images."/>
+                            </group>
+                        </page>
+                        <page string="4. Publish in Website" name="publish">
+                            <group>
+                                <field name="publish_option" widget="radio" help="Controls storefront and POS publication after export."/>
+                            </group>
+                            <p class="text-muted">Choose where the product will be published after export (Web Only / Web + POS / Unpublish).</p>
+                        </page>
+                    </notebook>
+                    <separator string="Step 3: Run Export"/>
+                    <div class="text-muted small">
+                        Click <strong>Start Product Export</strong> to enqueue export processing for the selected products.
+                    </div>
+                </sheet>
+                <footer>
+                    <button name="action_export" string="Start Product Export" type="object" class="btn-primary"/>
+                    <button string="Close" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Export wizard when invoked from layer list (same wizard, different binding) -->
+    <record id="action_shopify_export_wizard_from_layer" model="ir.actions.act_window">
+        <field name="name">Export to Shopify</field>
+        <field name="res_model">shopify.export.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="custom_odoo_shopify_connector.model_shopify_product_layer"/>
+    </record>
+
+    <!-- Action: open Shopify Product Layer list -->
+    <record id="action_shopify_product_layer" model="ir.actions.act_window">
+        <field name="name">Shopify Products (Layer)</field>
+        <field name="res_model">shopify.product.layer</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No Shopify product layer records yet.
+            </p>
+            <p>
+                From <strong>Sales → Products → Products</strong>, select one or more products,
+                then use <strong>Action → Shopify Prepare Product for Export</strong> to add them here.
+                You can edit details and then export to Shopify.
+            </p>
+        </field>
+    </record>
+
+    <!-- Legacy Shopify Product Layer menu removed; product layer is exposed
+         via the enterprise Products menus in views/shopify_menu.xml. -->
+
+</odoo>

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Action for manual stock export wizard -->
+    <record id="action_shopify_export_stock_wizard" model="ir.actions.act_window">
+        <field name="name">Export Stock</field>
+        <field name="res_model">shopify.export.stock.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <!-- Wizard form view -->
+    <record id="view_shopify_export_stock_wizard_form" model="ir.ui.view">
+        <field name="name">shopify.export.stock.wizard.form</field>
+        <field name="model">shopify.export.stock.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Export Stock to Shopify">
+                <sheet>
+                    <separator string="Step 1: Select Scope"/>
+                    <group class="mt-2 mb-2">
+                        <field name="store_id"
+                               string="Shopify Store"
+                               required="1"
+                               options="{'no_create': True}"
+                               help="Store where stock quantities will be updated."/>
+                        <field name="product_ids"
+                               string="Products"
+                               widget="many2many_tags"
+                               options="{'no_create': True}"
+                               help="Leave empty to include all eligible products for this store context."/>
+                    </group>
+
+                    <separator string="Step 2: Optional Date Filter"/>
+                    <group class="mt-2 mb-2">
+                        <field name="export_stock_from"
+                               string="Export Stock From"
+                               help="Only export products with stock movements after this date."/>
+                    </group>
+                    <p class="text-muted">
+                        If you set an "Export Stock From" date, only products whose last stock movement
+                        happened after this date will be exported. Leave empty to export all selected products.
+                    </p>
+                </sheet>
+                <footer>
+                    <button name="action_export_stock"
+                            string="Start Stock Export"
+                            type="object"
+                            class="btn-primary"/>
+                    <button string="Cancel"
+                            special="cancel"
+                            class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Legacy Export Stock menu removed; manual stock export is now
+         available under Synchronization → Export Stock in
+         views/shopify_menu.xml. -->
+
+</odoo>
+

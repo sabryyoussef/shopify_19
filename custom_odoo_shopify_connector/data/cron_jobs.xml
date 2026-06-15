@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Process Shopify Product Queue (draft lines) every 1 minute -->
+    <record id="ir_cron_shopify_process_product_queue" model="ir.cron">
+        <field name="name">Process Shopify Product Queue</field>
+        <field name="model_id" ref="model_shopify_product_queue"/>
+        <field name="state">code</field>
+        <field name="code">model.process_draft_queues_cron()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">minutes</field>
+        <field name="active">True</field>
+    </record>
+
+    <!-- Process Shopify Order Queue every 1 minute -->
+    <record id="ir_cron_shopify_process_order_queue" model="ir.cron">
+        <field name="name">Process Shopify Order Queue</field>
+        <field name="model_id" ref="model_shopify_order_queue"/>
+        <field name="state">code</field>
+        <field name="code">model.cron_process_order_queue()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">minutes</field>
+        <field name="active">True</field>
+    </record>
+
+    <!-- Sync Shopify Products every 30 minutes -->
+    <record id="ir_cron_shopify_sync_products" model="ir.cron">
+        <field name="name">Sync Shopify Products</field>
+        <field name="model_id" ref="model_shopify_product_sync"/>
+        <field name="state">code</field>
+        <field name="code">model.cron_sync_products()</field>
+        <field name="interval_number">30</field>
+        <field name="interval_type">minutes</field>
+        <field name="active">True</field>
+    </record>
+
+    <!-- Sync Shopify Customers every 60 minutes -->
+    <record id="ir_cron_shopify_sync_customers" model="ir.cron">
+        <field name="name">Sync Shopify Customers</field>
+        <field name="model_id" ref="model_shopify_customer_sync"/>
+        <field name="state">code</field>
+        <field name="code">model.cron_sync_customers()</field>
+        <field name="interval_number">60</field>
+        <field name="interval_type">minutes</field>
+        <field name="active">True</field>
+    </record>
+
+    <!-- Import Shopify Orders into queue every 30 minutes -->
+    <record id="ir_cron_shopify_import_orders" model="ir.cron">
+        <field name="name">Import Shopify Orders</field>
+        <field name="model_id" ref="model_shopify_store"/>
+        <field name="state">code</field>
+        <field name="code">model.import_orders_scheduler()</field>
+        <field name="interval_number">30</field>
+        <field name="interval_type">minutes</field>
+        <field name="active">True</field>
+    </record>
+
+    <!-- Update Shopify Shipping Status from completed deliveries (per-store interval) -->
+    <!-- Moved to data/cron.xml (avoid duplicate cron definitions). -->
+
+</odoo>
+

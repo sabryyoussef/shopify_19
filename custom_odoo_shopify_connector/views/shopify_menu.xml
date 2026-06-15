@@ -1,0 +1,498 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Shopify root menu (single entry point) -->
+    <menuitem
+        id="menu_shopify_root"
+        name="Shopify"
+        sequence="30"
+        groups="base.group_system"
+    />
+
+    <!-- Shortcut: Shipping Methods under Sales → Configuration -->
+    <menuitem
+        id="menu_shopify_shipping_methods"
+        name="Shipping Methods"
+        parent="sale.menu_sale_config"
+        action="delivery.action_delivery_carrier_form"
+        sequence="4"
+    />
+
+    <!-- High-level Shopify menu using existing root -->
+    <menuitem
+        id="menu_shopify_dashboard_root"
+        name="Dashboard"
+        parent="custom_odoo_shopify_connector.menu_shopify_root"
+        sequence="5"
+        action="action_shopify_dashboard"
+    />
+
+    <!-- Configuration -->
+    <menuitem
+        id="menu_shopify_configuration"
+        name="Configuration"
+        parent="custom_odoo_shopify_connector.menu_shopify_root"
+        sequence="10"
+    />
+
+    <menuitem
+        id="menu_shopify_configuration_instances"
+        name="Shopify Stores"
+        parent="menu_shopify_configuration"
+        action="action_shopify_store"
+        sequence="10"
+    />
+
+    <menuitem
+        id="menu_shopify_configuration_locations"
+        name="Locations"
+        parent="menu_shopify_configuration"
+        action="action_shopify_location"
+        sequence="20"
+    />
+
+    <menuitem
+        id="menu_shopify_configuration_payment_gateways"
+        name="Payment Gateways"
+        parent="menu_shopify_configuration"
+        action="action_shopify_payment_gateway"
+        sequence="30"
+    />
+
+    <menuitem
+        id="menu_shopify_configuration_delivery_methods"
+        name="Delivery Methods"
+        parent="menu_shopify_configuration"
+        action="action_shopify_delivery_carrier"
+        sequence="40"
+    />
+
+    <menuitem
+        id="menu_shopify_configuration_order_status_mapping"
+        name="Order Status Mapping"
+        parent="menu_shopify_configuration"
+        action="action_shopify_financial_status"
+        sequence="50"
+    />
+
+    <!-- Product Settings -->
+    <menuitem
+        id="menu_shopify_configuration_product_settings"
+        name="Product Settings"
+        parent="menu_shopify_configuration"
+        sequence="60"
+    />
+
+    <menuitem
+        id="menu_shopify_configuration_product_mapping"
+        name="Product Mapping"
+        parent="menu_shopify_configuration_product_settings"
+        action="action_shopify_product_map"
+        sequence="10"
+    />
+
+    <menuitem
+        id="menu_shopify_configuration_product_tags"
+        name="Product Tags"
+        parent="menu_shopify_configuration_product_settings"
+        action="action_shopify_product_tag"
+        sequence="20"
+    />
+
+    <menuitem
+        id="menu_shopify_configuration_product_collections"
+        name="Product Collections"
+        parent="menu_shopify_configuration_product_settings"
+        action="action_shopify_product_collection"
+        sequence="30"
+    />
+
+    <!-- Stock Settings -->
+    <menuitem
+        id="menu_shopify_configuration_stock_settings"
+        name="Stock Settings"
+        parent="menu_shopify_configuration"
+        sequence="70"
+    />
+
+    <menuitem
+        id="menu_shopify_configuration_warehouse_mapping"
+        name="Warehouse Mapping"
+        parent="menu_shopify_configuration_stock_settings"
+        action="action_shopify_location"
+        sequence="10"
+    />
+
+    <!-- Stock Export Type (uses fields on instance) -->
+    <menuitem
+        id="menu_shopify_configuration_stock_export_type"
+        name="Stock Export Type"
+        parent="menu_shopify_configuration_stock_settings"
+        action="action_shopify_store"
+        sequence="20"
+    />
+
+    <!-- Webhooks -->
+    <menuitem
+        id="menu_shopify_configuration_webhooks"
+        name="Webhooks"
+        parent="menu_shopify_configuration"
+        action="action_shopify_webhook_handler"
+        sequence="80"
+    />
+
+    <!-- Scheduler Configuration (store holds scheduler fields) -->
+    <menuitem
+        id="menu_shopify_configuration_scheduler"
+        name="Scheduler Configuration"
+        parent="menu_shopify_configuration"
+        action="action_shopify_store"
+        sequence="90"
+    />
+
+    <!-- Products -->
+    <menuitem
+        id="menu_shopify_products_root"
+        name="Products"
+        parent="custom_odoo_shopify_connector.menu_shopify_root"
+        sequence="20"
+    />
+
+    <menuitem
+        id="menu_shopify_products_products"
+        name="Products"
+        parent="menu_shopify_products_root"
+        action="action_shopify_products"
+        sequence="10"
+    />
+
+    <menuitem
+        id="menu_shopify_products_templates"
+        name="Product Templates"
+        parent="menu_shopify_products_root"
+        action="action_shopify_product_templates"
+        sequence="20"
+    />
+
+    <menuitem
+        id="menu_shopify_products_variants"
+        name="Product Variants"
+        parent="menu_shopify_products_root"
+        action="action_shopify_variant_products"
+        sequence="30"
+    />
+
+    <menuitem
+        id="menu_shopify_products_mapping"
+        name="Product Mapping"
+        parent="menu_shopify_products_root"
+        action="action_shopify_product_map"
+        sequence="40"
+    />
+
+    <menuitem
+        id="menu_shopify_products_layer"
+        name="Product Layer"
+        parent="menu_shopify_products_root"
+        action="action_shopify_product_layer"
+        sequence="45"
+    />
+
+    <menuitem
+        id="menu_shopify_products_images"
+        name="Product Images"
+        parent="menu_shopify_products_root"
+        action="action_shopify_image_update_queue"
+        sequence="50"
+    />
+
+    <menuitem
+        id="menu_shopify_products_tags"
+        name="Product Tags"
+        parent="menu_shopify_products_root"
+        action="action_shopify_product_tag"
+        sequence="60"
+    />
+
+    <!-- Customers -->
+    <menuitem
+        id="menu_shopify_customers_root"
+        name="Customers"
+        parent="custom_odoo_shopify_connector.menu_shopify_root"
+        sequence="30"
+    />
+
+    <menuitem
+        id="menu_shopify_customers_customers"
+        name="Customers"
+        parent="menu_shopify_customers_root"
+        action="action_shopify_res_partner"
+        sequence="10"
+    />
+
+    <menuitem
+        id="menu_shopify_customers_mapping"
+        name="Customer Mapping"
+        parent="menu_shopify_customers_root"
+        action="action_shopify_customer_mapping"
+        sequence="20"
+    />
+
+    <!-- Orders -->
+    <menuitem
+        id="menu_shopify_orders_root"
+        name="Orders"
+        parent="custom_odoo_shopify_connector.menu_shopify_root"
+        sequence="40"
+    />
+
+    <menuitem
+        id="menu_shopify_orders_orders"
+        name="Orders"
+        parent="menu_shopify_orders_root"
+        action="action_shopify_sale_orders"
+        sequence="10"
+    />
+
+    <menuitem
+        id="menu_shopify_orders_order_queue"
+        name="Order Queue"
+        parent="menu_shopify_orders_root"
+        action="action_shopify_order_queue"
+        sequence="20"
+    />
+
+    <menuitem
+        id="menu_shopify_orders_refunds"
+        name="Refunds"
+        parent="menu_shopify_orders_root"
+        action="action_shopify_refunds"
+        sequence="30"
+    />
+
+    <!-- Inventory -->
+    <menuitem
+        id="menu_shopify_inventory_root"
+        name="Inventory"
+        parent="custom_odoo_shopify_connector.menu_shopify_root"
+        sequence="50"
+    />
+
+    <menuitem
+        id="menu_shopify_inventory_levels"
+        name="Inventory Levels"
+        parent="menu_shopify_inventory_root"
+        action="action_shopify_stock_quant"
+        sequence="10"
+    />
+
+    <menuitem
+        id="menu_shopify_inventory_stock_export_queue"
+        name="Stock Export Queue"
+        parent="menu_shopify_inventory_root"
+        action="action_shopify_stock_queue"
+        sequence="20"
+    />
+
+    <menuitem
+        id="menu_shopify_inventory_adjustment_logs"
+        name="Inventory Adjustment Logs"
+        parent="menu_shopify_inventory_root"
+        action="action_shopify_inventory_adjustment_log"
+        sequence="30"
+    />
+
+    <!-- Shipping -->
+    <menuitem
+        id="menu_shopify_shipping_root"
+        name="Shipping"
+        parent="custom_odoo_shopify_connector.menu_shopify_root"
+        sequence="60"
+    />
+
+    <menuitem
+        id="menu_shopify_shipping_deliveries"
+        name="Deliveries"
+        parent="menu_shopify_shipping_root"
+        action="action_shopify_deliveries"
+        sequence="10"
+    />
+
+    <menuitem
+        id="menu_shopify_shipping_tracking_export"
+        name="Tracking Export"
+        parent="menu_shopify_shipping_root"
+        action="action_shopify_shipping_queue"
+        sequence="20"
+    />
+
+    <menuitem
+        id="menu_shopify_shipping_carrier_mapping"
+        name="Carrier Mapping"
+        parent="menu_shopify_shipping_root"
+        action="action_shopify_carrier_mapping"
+        sequence="30"
+    />
+
+    <!-- Synchronization -->
+    <menuitem
+        id="menu_shopify_synchronization_root"
+        name="Synchronization"
+        parent="custom_odoo_shopify_connector.menu_shopify_root"
+        sequence="70"
+    />
+
+    <menuitem
+        id="menu_shopify_sync_import_products"
+        name="Import Products"
+        parent="menu_shopify_synchronization_root"
+        action="action_shopify_product_queue"
+        sequence="10"
+    />
+
+    <menuitem
+        id="menu_shopify_sync_export_products"
+        name="Export Products"
+        parent="menu_shopify_synchronization_root"
+        action="action_shopify_prepare_export_wizard"
+        sequence="20"
+    />
+
+    <menuitem
+        id="menu_shopify_sync_import_customers"
+        name="Import Customers"
+        parent="menu_shopify_synchronization_root"
+        action="action_shopify_customer_import_queue"
+        sequence="30"
+    />
+
+    <menuitem
+        id="menu_shopify_sync_import_orders"
+        name="Import Orders"
+        parent="menu_shopify_synchronization_root"
+        action="action_shopify_import_queue"
+        sequence="40"
+    />
+
+    <menuitem
+        id="menu_shopify_sync_export_stock"
+        name="Export Stock"
+        parent="menu_shopify_synchronization_root"
+        action="action_shopify_export_stock_wizard"
+        sequence="50"
+    />
+
+    <menuitem
+        id="menu_shopify_sync_update_price"
+        name="Update Price"
+        parent="menu_shopify_synchronization_root"
+        action="action_shopify_price_update_queue"
+        sequence="60"
+    />
+
+    <!-- Queues -->
+    <menuitem
+        id="menu_shopify_queues_root"
+        name="Queues"
+        parent="custom_odoo_shopify_connector.menu_shopify_root"
+        sequence="80"
+    />
+
+    <menuitem
+        id="menu_shopify_queues_product_queue"
+        name="Product Queue"
+        parent="menu_shopify_queues_root"
+        action="action_shopify_product_queue"
+        sequence="10"
+    />
+
+    <menuitem
+        id="menu_shopify_queues_order_queue"
+        name="Order Queue"
+        parent="menu_shopify_queues_root"
+        action="action_shopify_order_queue"
+        sequence="20"
+    />
+
+    <menuitem
+        id="menu_shopify_queues_customer_queue"
+        name="Customer Queue"
+        parent="menu_shopify_queues_root"
+        action="action_shopify_customer_queue"
+        sequence="30"
+    />
+
+    <menuitem
+        id="menu_shopify_queues_inventory_queue"
+        name="Inventory Queue"
+        parent="menu_shopify_queues_root"
+        action="action_shopify_stock_queue"
+        sequence="40"
+    />
+
+    <!-- Sync Logs -->
+    <menuitem
+        id="menu_shopify_logs_root"
+        name="Sync Logs"
+        parent="custom_odoo_shopify_connector.menu_shopify_root"
+        sequence="90"
+    />
+
+    <menuitem
+        id="menu_shopify_logs_api"
+        name="API Logs"
+        parent="menu_shopify_logs_root"
+        action="action_shopify_api_log"
+        sequence="10"
+    />
+
+    <menuitem
+        id="menu_shopify_logs_sync"
+        name="Sync Logs"
+        parent="menu_shopify_logs_root"
+        action="action_shopify_sync_log"
+        sequence="20"
+    />
+
+    <menuitem
+        id="menu_shopify_logs_error"
+        name="Error Logs"
+        parent="menu_shopify_logs_root"
+        action="action_shopify_error_log"
+        sequence="30"
+    />
+
+    <!-- Reports -->
+    <menuitem
+        id="menu_shopify_reports_root"
+        name="Reports"
+        parent="custom_odoo_shopify_connector.menu_shopify_root"
+        sequence="100"
+    />
+
+    <menuitem
+        id="menu_shopify_reports_sales_analysis"
+        name="Sales Analysis"
+        parent="menu_shopify_reports_root"
+        action="sale.action_orders"  
+        sequence="10"
+    />
+
+    <menuitem
+        id="menu_shopify_reports_product_sync"
+        name="Product Sync Report"
+        parent="menu_shopify_reports_root"
+        action="action_shopify_sync_report"
+        sequence="20"
+    />
+
+    <menuitem
+        id="menu_shopify_reports_queue_performance"
+        name="Queue Performance"
+        parent="menu_shopify_reports_root"
+        action="action_shopify_order_queue"
+        sequence="30"
+    />
+
+</odoo>
+

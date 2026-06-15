@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Root menu only; loaded early so other view files can use parent="menu_shopify_root". -->
+    <menuitem
+        id="menu_shopify_root"
+        name="Shopify Integration"
+        sequence="30"
+        groups="base.group_system"
+    />
+</odoo>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Update Shopify Order Shipping Status (per instance).
+         Runs every minute and applies each store's configured interval
+         (Shopify → Configuration → Instance). -->
+    <record id="ir_cron_shopify_update_shipping_status_per_instance" model="ir.cron">
+        <field name="name">Update Order Shipping Status</field>
+        <field name="model_id" ref="custom_odoo_shopify_connector.model_shopify_store"/>
+        <field name="state">code</field>
+        <field name="code">model.cron_shopify_update_shipping_status()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">minutes</field>
+        <field name="active">True</field>
+    </record>
+
+    <!-- Import Shipped Orders (per instance).
+         Runs every minute and applies each store's configured interval. -->
+    <record id="ir_cron_shopify_import_shipped_orders_per_instance" model="ir.cron">
+        <field name="name">Import Shipped Orders</field>
+        <field name="model_id" ref="custom_odoo_shopify_connector.model_shopify_store"/>
+        <field name="state">code</field>
+        <field name="code">model.cron_shopify_import_shipped_orders()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">minutes</field>
+        <field name="active">True</field>
+    </record>
+
+    <!-- Export Stock (per instance).
+         Runs every minute and applies each store's configured interval. -->
+    <record id="ir_cron_shopify_export_stock_per_instance" model="ir.cron">
+        <field name="name">Export Stock</field>
+        <field name="model_id" ref="custom_odoo_shopify_connector.model_shopify_store"/>
+        <field name="state">code</field>
+        <field name="code">model.cron_shopify_export_stock()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">minutes</field>
+        <field name="active">True</field>
+    </record>
+</odoo>

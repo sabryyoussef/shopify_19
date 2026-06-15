@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Shopify Connector Pro — Odoo 19</title>
+</head>
+<body style="margin:0;padding:0;font-family:'Segoe UI',Arial,sans-serif;background:#f4f6fb;color:#1e293b;font-size:15px;line-height:1.6;">
+
+<!-- ══════════ HERO ══════════ -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg,#0f1c3f 0%,#1a2e6b 45%,#0e3460 100%);">
+  <tr><td align="center" style="padding:64px 24px 72px;">
+    <div style="display:inline-block;background:rgba(99,179,237,0.15);border:1px solid rgba(99,179,237,0.35);color:#93c5fd;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:6px 18px;border-radius:999px;margin-bottom:28px;">&#9679;&nbsp; Odoo 19.0 &nbsp;·&nbsp; Pro Edition &nbsp;·&nbsp; v19.0.1.0.0</div>
+    <div style="font-size:52px;font-weight:900;color:#ffffff;line-height:1.1;letter-spacing:-0.03em;margin-bottom:8px;">Shopify <span style="color:#67e8f9;">&#8596;</span> Odoo</div>
+    <div style="font-size:52px;font-weight:900;color:#ffffff;line-height:1.1;letter-spacing:-0.03em;margin-bottom:24px;">Connector <span style="color:#38bdf8;">Pro</span></div>
+    <div style="font-size:18px;color:rgba(255,255,255,0.68);max-width:580px;margin:0 auto 40px;line-height:1.75;">The most complete bridge between your Odoo ERP and Shopify store. Sync products, orders, customers, inventory, fulfillments, and refunds — automatically and reliably.</div>
+    <div style="margin-bottom:56px;">
+      <a href="https://apps.odoo.com" style="display:inline-block;background:linear-gradient(135deg,#2563eb,#0ea5e9);color:#fff;font-size:15px;font-weight:700;padding:15px 36px;border-radius:999px;text-decoration:none;margin:6px 8px;">&#128722; Buy Now — $450</a>
+      <a href="mailto:gultajkhan980@gmail.com" style="display:inline-block;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.25);color:#fff;font-size:15px;font-weight:600;padding:15px 36px;border-radius:999px;text-decoration:none;margin:6px 8px;">&#128231; Contact Support</a>
+    </div>
+    <table cellpadding="0" cellspacing="0" style="margin:0 auto;">
+      <tr>
+        <td align="center" style="padding:0 32px;">
+          <div style="font-size:32px;font-weight:900;color:#ffffff;">19.0</div>
+          <div style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-top:4px;">Odoo Version</div>
+        </td>
+        <td align="center" style="padding:0 32px;border-left:1px solid rgba(255,255,255,0.12);">
+          <div style="font-size:32px;font-weight:900;color:#ffffff;">6+</div>
+          <div style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-top:4px;">Sync Entities</div>
+        </td>
+        <td align="center" style="padding:0 32px;border-left:1px solid rgba(255,255,255,0.12);">
+          <div style="font-size:32px;font-weight:900;color:#ffffff;">&#8734;</div>
+          <div style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-top:4px;">Multi-Store</div>
+        </td>
+        <td align="center" style="padding:0 32px;border-left:1px solid rgba(255,255,255,0.12);">
+          <div style="font-size:32px;font-weight:900;color:#ffffff;">RT</div>
+          <div style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-top:4px;">Webhooks</div>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+</table>
+
+<!-- ══════════ FEATURES HEADING ══════════ -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fb;">
+  <tr><td align="center" style="padding:72px 24px 16px;">
+    <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#2563eb;margin-bottom:10px;">Core Features</div>
+    <div style="font-size:38px;font-weight:900;color:#0f172a;letter-spacing:-0.02em;line-height:1.15;margin-bottom:14px;">Everything in one module</div>
+    <div style="font-size:16px;color:#64748b;max-width:540px;margin:0 auto 56px;line-height:1.75;">Production-grade integration covering every data flow between Shopify and Odoo — products, orders, inventory, customers, refunds, and more.</div>
+  </td></tr>
+</table>
+
+<!-- Feature Row 1 -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fb;">
+  <tr><td style="padding:0 32px 20px;">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr valign="top">
+      <td width="33%" style="padding:0 10px;">
+        <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,0.06);">
+          <div style="width:48px;height:48px;background:#eff6ff;border-radius:12px;font-size:22px;text-align:center;line-height:48px;margin-bottom:16px;">&#128230;</div>
+          <div style="font-size:16px;font-weight:700;color:#0f172a;margin-bottom:8px;">Product &amp; Variant Sync</div>
+          <div style="font-size:14px;color:#64748b;line-height:1.7;">Export simple and variant products from Odoo to Shopify including title, description, SKU, barcode, prices, and images. Push updates whenever product data changes.</div>
+          <div style="display:inline-block;margin-top:12px;font-size:11px;font-weight:600;color:#2563eb;background:#eff6ff;padding:3px 10px;border-radius:999px;">Bidirectional</div>
+        </div>
+      </td>
+      <td width="33%" style="padding:0 10px;">
+        <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,0.06);">
+          <div style="width:48px;height:48px;background:#f0fdfa;border-radius:12px;font-size:22px;text-align:center;line-height:48px;margin-bottom:16px;">&#128722;</div>
+          <div style="font-size:16px;font-weight:700;color:#0f172a;margin-bottom:8px;">Order Import &amp; Processing</div>
+          <div style="font-size:14px;color:#64748b;line-height:1.7;">Automatically import Shopify orders as Odoo Sale Orders with lines, quantities, taxes, customer addresses, and Shopify IDs for full traceability and reconciliation.</div>
+          <div style="display:inline-block;margin-top:12px;font-size:11px;font-weight:600;color:#0d9488;background:#f0fdfa;padding:3px 10px;border-radius:999px;">Auto-Confirm</div>
+        </div>
+      </td>
+      <td width="33%" style="padding:0 10px;">
+        <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,0.06);">
+          <div style="width:48px;height:48px;background:#f5f3ff;border-radius:12px;font-size:22px;text-align:center;line-height:48px;margin-bottom:16px;">&#128101;</div>
+          <div style="font-size:16px;font-weight:700;color:#0f172a;margin-bottom:8px;">Customer Synchronization</div>
+          <div style="font-size:14px;color:#64748b;line-height:1.7;">Import Shopify customers as Odoo partners — name, email, phone, billing and shipping addresses. Multi-store deduplication keeps your CRM clean and consistent.</div>
+          <div style="display:inline-block;margin-top:12px;font-size:11px;font-weight:600;color:#7c3aed;background:#f5f3ff;padding:3px 10px;border-radius:999px;">Multi-Store Safe</div>
+        </div>
+      </td>
+    </tr></table>
+  </td></tr>
+</table>
+
+<!-- Feature Row 2 -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fb;">
+  <tr><td style="padding:0 32px 20px;">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr valign="top">
+      <td width="33%" style="padding:0 10px;">
+        <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,0.06);">
+          <div style="width:48px;height:48px;background:#f0fdf4;border-radius:12px;font-size:22px;text-align:center;line-height:48px;margin-bottom:16px;">&#128202;</div>
+          <div style="font-size:16px;font-weight:700;color:#0f172a;margin-bottom:8px;">Real-Time Inventory Sync</div>
+          <div style="font-size:14px;color:#64748b;line-height:1.7;">Push Odoo on-hand stock to Shopify per location. Automatically update inventory after shipments, deliveries, and returns — mapped per warehouse and Shopify location.</div>
+          <div style="display:inline-block;margin-top:12px;font-size:11px;font-weight:600;color:#15803d;background:#f0fdf4;padding:3px 10px;border-radius:999px;">Multi-Warehouse</div>
+        </div>
+      </td>
+      <td width="33%" style="padding:0 10px;">
+        <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,0.06);">
+          <div style="width:48px;height:48px;background:#fffbeb;border-radius:12px;font-size:22px;text-align:center;line-height:48px;margin-bottom:16px;">&#128666;</div>
+          <div style="font-size:16px;font-weight:700;color:#0f172a;margin-bottom:8px;">Fulfillment &amp; Tracking</div>
+          <div style="font-size:14px;color:#64748b;line-height:1.7;">Send tracking numbers from Odoo delivery orders to Shopify and update fulfillment status. Handles full and partial fulfillment scenarios automatically without manual steps.</div>
+          <div style="display:inline-block;margin-top:12px;font-size:11px;font-weight:600;color:#b45309;background:#fffbeb;padding:3px 10px;border-radius:999px;">Auto-Fulfill</div>
+        </div>
+      </td>
+      <td width="33%" style="padding:0 10px;">
+        <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,0.06);">
+          <div style="width:48px;height:48px;background:#fdf4ff;border-radius:12px;font-size:22px;text-align:center;line-height:48px;margin-bottom:16px;">&#128179;</div>
+          <div style="font-size:16px;font-weight:700;color:#0f172a;margin-bottom:8px;">Refunds &amp; Credit Notes</div>
+          <div style="font-size:14px;color:#64748b;line-height:1.7;">Push Odoo credit notes to Shopify as refunds. Financial status mapping, payment gateway rules, and auto-workflow configuration ensure accurate accounting on both sides.</div>
+          <div style="display:inline-block;margin-top:12px;font-size:11px;font-weight:600;color:#a21caf;background:#fdf4ff;padding:3px 10px;border-radius:999px;">Accounting Ready</div>
+        </div>
+      </td>
+    </tr></table>
+  </td></tr>
+</table>
+
+<!-- Feature Row 3 -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fb;">
+  <tr><td style="padding:0 32px 20px;">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr valign="top">
+      <td width="33%" style="padding:0 10px;">
+        <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,0.06);">
+          <div style="width:48px;height:48px;background:#eff6ff;border-radius:12px;font-size:22px;text-align:center;line-height:48px;margin-bottom:16px;">&#127978;</div>
+          <div style="font-size:16px;font-weight:700;color:#0f172a;margin-bottom:8px;">Multi-Store Management</div>
+          <div style="font-size:14px;color:#64748b;line-height:1.7;">Manage unlimited Shopify stores from a single Odoo database. Each store has independent credentials, warehouse mapping, pricelist, workflow, and cron schedule configuration.</div>
+          <div style="display:inline-block;margin-top:12px;font-size:11px;font-weight:600;color:#2563eb;background:#eff6ff;padding:3px 10px;border-radius:999px;">Unlimited Stores</div>
+        </div>
+      </td>
+      <td width="33%" style="padding:0 10px;">
+        <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,0.06);">
+          <div style="width:48px;height:48px;background:#f0fdfa;border-radius:12px;font-size:22px;text-align:center;line-height:48px;margin-bottom:16px;">&#9889;</div>
+          <div style="font-size:16px;font-weight:700;color:#0f172a;margin-bottom:8px;">Webhook Real-Time Events</div>
+          <div style="font-size:14px;color:#64748b;line-height:1.7;">Receive orders, refunds, and customer events from Shopify in near real-time via HMAC-SHA256 signed webhooks. Payloads are safely queued before background processing.</div>
+          <div style="display:inline-block;margin-top:12px;font-size:11px;font-weight:600;color:#0d9488;background:#f0fdfa;padding:3px 10px;border-radius:999px;">HMAC Verified</div>
+        </div>
+      </td>
+      <td width="33%" style="padding:0 10px;">
+        <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,0.06);">
+          <div style="width:48px;height:48px;background:#f5f3ff;border-radius:12px;font-size:22px;text-align:center;line-height:48px;margin-bottom:16px;">&#128260;</div>
+          <div style="font-size:16px;font-weight:700;color:#0f172a;margin-bottom:8px;">Queue-Based Processing</div>
+          <div style="font-size:14px;color:#64748b;line-height:1.7;">Every sync operation is stored in queues with clear statuses: Pending, Processing, Done, Failed. Retry individual failed jobs with full error logs — no data is ever lost.</div>
+          <div style="display:inline-block;margin-top:12px;font-size:11px;font-weight:600;color:#7c3aed;background:#f5f3ff;padding:3px 10px;border-radius:999px;">Background Safe</div>
+        </div>
+      </td>
+    </tr></table>
+  </td></tr>
+</table>
+
+<!-- Feature Row 4 -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fb;">
+  <tr><td style="padding:0 32px 72px;">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr valign="top">
+      <td width="33%" style="padding:0 10px;">
+        <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,0.06);">
+          <div style="width:48px;height:48px;background:#f0fdf4;border-radius:12px;font-size:22px;text-align:center;line-height:48px;margin-bottom:16px;">&#128196;</div>
+          <div style="font-size:16px;font-weight:700;color:#0f172a;margin-bottom:8px;">Excel Bulk Product Import</div>
+          <div style="font-size:14px;color:#64748b;line-height:1.7;">Upload products to Odoo directly from Excel spreadsheets. Map columns, validate data, and push to Shopify in one streamlined workflow — no manual entry needed.</div>
+          <div style="display:inline-block;margin-top:12px;font-size:11px;font-weight:600;color:#15803d;background:#f0fdf4;padding:3px 10px;border-radius:999px;">Bulk Ready</div>
+        </div>
+      </td>
+      <td width="33%" style="padding:0 10px;">
+        <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,0.06);">
+          <div style="width:48px;height:48px;background:#fffbeb;border-radius:12px;font-size:22px;text-align:center;line-height:48px;margin-bottom:16px;">&#128444;&#65039;</div>
+          <div style="font-size:16px;font-weight:700;color:#0f172a;margin-bottom:8px;">Image Synchronization</div>
+          <div style="font-size:14px;color:#64748b;line-height:1.7;">Upload Odoo product images to Shopify media automatically. The image service handles fetching, base64 encoding, and syncing multiple images per product variant.</div>
+          <div style="display:inline-block;margin-top:12px;font-size:11px;font-weight:600;color:#b45309;background:#fffbeb;padding:3px 10px;border-radius:999px;">Multi-Image</div>
+        </div>
+      </td>
+      <td width="33%" style="padding:0 10px;">
+        <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,0.06);">
+          <div style="width:48px;height:48px;background:#fdf4ff;border-radius:12px;font-size:22px;text-align:center;line-height:48px;margin-bottom:16px;">&#9881;&#65039;</div>
+          <div style="font-size:16px;font-weight:700;color:#0f172a;margin-bottom:8px;">Auto-Workflow Engine</div>
+          <div style="font-size:14px;color:#64748b;line-height:1.7;">Configure automatic confirmation, invoicing, and payment rules per Shopify financial status. Orders can flow completely hands-free from import to invoice in Odoo.</div>
+          <div style="display:inline-block;margin-top:12px;font-size:11px;font-weight:600;color:#a21caf;background:#fdf4ff;padding:3px 10px;border-radius:999px;">Fully Automated</div>
+        </div>
+      </td>
+    </tr></table>
+  </td></tr>
+</table>
+
+<!-- DIVIDER -->
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td style="height:1px;background:#e2e8f0;"></td></tr></table>
+
+<!-- ══════════ STORE CONFIG SECTION ══════════ -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;">
+  <tr><td style="padding:72px 40px;">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr valign="middle">
+      <td width="48%" style="padding-right:40px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#2563eb;margin-bottom:10px;">Store Configuration</div>
+        <div style="font-size:30px;font-weight:900;color:#0f172a;letter-spacing:-0.02em;line-height:1.2;margin-bottom:16px;">One dashboard for all your Shopify stores</div>
+        <div style="font-size:15px;color:#64748b;line-height:1.75;margin-bottom:20px;">Configure each store with its own credentials, default warehouse, sales workflow, pricelist, and tax behavior — all in a clean native Odoo form view.</div>
+        <table cellpadding="0" cellspacing="0">
+          <tr><td style="padding:5px 0;"><span style="color:#16a34a;font-weight:700;margin-right:8px;">&#10003;</span><span style="font-size:14px;color:#334155;">Store URL and Admin API access token</span></td></tr>
+          <tr><td style="padding:5px 0;"><span style="color:#16a34a;font-weight:700;margin-right:8px;">&#10003;</span><span style="font-size:14px;color:#334155;">Per-store warehouse and location mapping</span></td></tr>
+          <tr><td style="padding:5px 0;"><span style="color:#16a34a;font-weight:700;margin-right:8px;">&#10003;</span><span style="font-size:14px;color:#334155;">Configurable order prefix and numbering</span></td></tr>
+          <tr><td style="padding:5px 0;"><span style="color:#16a34a;font-weight:700;margin-right:8px;">&#10003;</span><span style="font-size:14px;color:#334155;">Auto-sync intervals for all data types</span></td></tr>
+          <tr><td style="padding:5px 0;"><span style="color:#16a34a;font-weight:700;margin-right:8px;">&#10003;</span><span style="font-size:14px;color:#334155;">Webhook secret and HMAC verification</span></td></tr>
+          <tr><td style="padding:5px 0;"><span style="color:#16a34a;font-weight:700;margin-right:8px;">&#10003;</span><span style="font-size:14px;color:#334155;">Test connection from Odoo in one click</span></td></tr>
+        </table>
+      </td>
+      <td width="52%">
+        <div style="border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 8px 32px rgba(37,99,235,0.12);">
+          <img src="images/store_configuration.png" alt="Shopify Store Configuration" width="100%" style="display:block;" />
+        </div>
+      </td>
+    </tr></table>
+  </td></tr>
+</table>
+
+<!-- ══════════ MULTI-STORE SECTION ══════════ -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fb;">
+  <tr><td style="padding:72px 40px;">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr valign="middle">
+      <td width="52%" style="padding-right:40px;">
+        <div style="border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 8px 32px rgba(37,99,235,0.12);">
+          <img src="images/handling_multiple_store_dashboard.png" alt="Multi-Store Dashboard" width="100%" style="display:block;" />
+        </div>
+      </td>
+      <td width="48%" style="padding-left:8px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#2563eb;margin-bottom:10px;">Multi-Store</div>
+        <div style="font-size:30px;font-weight:900;color:#0f172a;letter-spacing:-0.02em;line-height:1.2;margin-bottom:16px;">Manage unlimited Shopify stores centrally</div>
+        <div style="font-size:15px;color:#64748b;line-height:1.75;margin-bottom:20px;">All Shopify stores managed from a single Odoo database with full store-level data isolation and independent configurations.</div>
+        <table cellpadding="0" cellspacing="0">
+          <tr><td style="padding:5px 0;"><span style="color:#16a34a;font-weight:700;margin-right:8px;">&#10003;</span><span style="font-size:14px;color:#334155;">Unlimited Shopify store connections</span></td></tr>
+          <tr><td style="padding:5px 0;"><span style="color:#16a34a;font-weight:700;margin-right:8px;">&#10003;</span><span style="font-size:14px;color:#334155;">Separate API credentials per store</span></td></tr>
+          <tr><td style="padding:5px 0;"><span style="color:#16a34a;font-weight:700;margin-right:8px;">&#10003;</span><span style="font-size:14px;color:#334155;">Store-aware orders, products, and customers</span></td></tr>
+          <tr><td style="padding:5px 0;"><span style="color:#16a34a;font-weight:700;margin-right:8px;">&#10003;</span><span style="font-size:14px;color:#334155;">Independent cron schedules per store</span></td></tr>
+        </table>
+      </td>
+    </tr></table>
+  </td></tr>
+</table>
+
+<!-- ══════════ AUTO SYNC SECTION ══════════ -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;">
+  <tr><td align="center" style="padding:72px 40px 48px;">
+    <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#2563eb;margin-bottom:10px;">Scheduled Automation</div>
+    <div style="font-size:34px;font-weight:900;color:#0f172a;letter-spacing:-0.02em;line-height:1.2;margin-bottom:12px;">Configure auto-sync for every data type</div>
+    <div style="font-size:15px;color:#64748b;max-width:520px;margin:0 auto 48px;">Each store has independent scheduling for products, orders, and inventory with configurable intervals and last-sync timestamps.</div>
+    <table width="100%" cellpadding="0" cellspacing="0"><tr valign="top">
+      <td width="33%" style="padding:0 10px;">
+        <div style="border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 16px rgba(0,0,0,0.07);">
+          <img src="images/store_config_and_auto_sync_products.png" alt="Auto Sync Products" width="100%" style="display:block;" />
+          <div style="padding:16px 18px;">
+            <div style="font-size:14px;font-weight:700;color:#0f172a;">Product Auto-Sync</div>
+            <div style="font-size:12px;color:#64748b;margin-top:4px;">Schedule automatic product synchronization per store</div>
+          </div>
+        </div>
+      </td>
+      <td width="33%" style="padding:0 10px;">
+        <div style="border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 16px rgba(0,0,0,0.07);">
+          <img src="images/store_config_and_auto_sync_orders.png" alt="Auto Sync Orders" width="100%" style="display:block;" />
+          <div style="padding:16px 18px;">
+            <div style="font-size:14px;font-weight:700;color:#0f172a;">Order Auto-Sync</div>
+            <div style="font-size:12px;color:#64748b;margin-top:4px;">Configure automatic order import intervals per store</div>
+          </div>
+        </div>
+      </td>
+      <td width="33%" style="padding:0 10px;">
+        <div style="border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 16px rgba(0,0,0,0.07);">
+          <img src="images/store_config_and_auto_sync_inoventory.png" alt="Auto Sync Inventory" width="100%" style="display:block;" />
+          <div style="padding:16px 18px;">
+            <div style="font-size:14px;font-weight:700;color:#0f172a;">Inventory Auto-Sync</div>
+            <div style="font-size:12px;color:#64748b;margin-top:4px;">Push stock levels to Shopify on a schedule</div>
+          </div>
+        </div>
+      </td>
+    </tr></table>
+  </td></tr>
+</table>
+
+<!-- ══════════ PRODUCT SYNC SECTION ══════════ -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fb;">
+  <tr><td style="padding:72px 40px;">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr valign="middle">
+      <td width="48%" style="padding-right:40px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#2563eb;margin-bottom:10px;">Product Management</div>
+        <div style="font-size:30px;font-weight:900;color:#0f172a;letter-spacing:-0.02em;line-height:1.2;margin-bottom:16px;">Export and sync products with full variant support</div>
+        <div style="font-size:15px;color:#64748b;line-height:1.75;margin-bottom:20px;">Push Odoo products to Shopify with all attributes, variants, prices, and images. The product layer gives granular control over what gets synced and when.</div>
+        <table cellpadding="0" cellspacing="0">
+          <tr><td style="padding:5px 0;"><span style="color:#16a34a;font-weight:700;margin-right:8px;">&#10003;</span><span style="font-size:14px;color:#334155;">Simple and attribute-based variant products</span></td></tr>
+          <tr><td style="padding:5px 0;"><span style="color:#16a34a;font-weight:700;margin-right:8px;">&#10003;</span><span style="font-size:14px;color:#334155;">Title, description, SKU, barcode sync</span></td></tr>
+          <tr><td style="padding:5px 0;"><span style="color:#16a34a;font-weight:700;margin-right:8px;">&#10003;</span><span style="font-size:14px;color:#334155;">Pricelist-aware price export</span></td></tr>
+          <tr><td style="padding:5px 0;"><span style="color:#16a34a;font-weight:700;margin-right:8px;">&#10003;</span><span style="font-size:14px;color:#334155;">Multi-image upload to Shopify media</span></td></tr>
+          <tr><td style="padding:5px 0;"><span style="color:#16a34a;font-weight:700;margin-right:8px;">&#10003;</span><span style="font-size:14px;color:#334155;">Field-level sync state control</span></td></tr>
+          <tr><td style="padding:5px 0;"><span style="color:#16a34a;font-weight:700;margin-right:8px;">&#10003;</span><span style="font-size:14px;color:#334155;">Import by Shopify product ID</span></td></tr>
+        </table>
+      </td>
+      <td width="52%">
+        <div style="border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 8px 32px rgba(37,99,235,0.12);">
+          <img src="images/importing_product_operations.png" alt="Product Operations" width="100%" style="display:block;" />
+        </div>
+      </td>
+    </tr></table>
+  </td></tr>
+</table>
+
+<!-- ══════════ ORDER SECTION ══════════ -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;">
+  <tr><td style="padding:72px 40px;">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr valign="middle">
+      <td width="52%" style="padding-right:40px;">
+        <div style="border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 8px 32px rgba(37,99,235,0.12);">
+          <img src="images/imported_orders_from_shopify.png" alt="Imported Orders" width="100%" style="display:block;" />
+        </div>
+      </td>
+      <td width="48%" style="padding-left:8px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#2563eb;margin-bottom:10px;">Order Sync</div>
+        <div style="font-size:30px;font-weight:900;color:#0f172a;letter-spacing:-0.02em;line-height:1.2;margin-bottom:16px;">Orders flow from Shopify into Odoo automatically</div>
+        <div style="font-size:15px;color:#64748b;line-height:1.75;margin-bottom:20px;">Shopify orders become Odoo Sale Orders with all lines, taxes, customer details, and addresses. Financial workflows apply based on payment status automatically.</div>
+        <table cellpadding="0" cellspacing="0">
+          <tr><td style="padding:5px 0;"><span style="color:#16a34a;font-weight:700;margin-right:8px;">&#10003;</span><span style="font-size:14px;color:#334155;">Filter by fulfillment status</span></td></tr>
+          <tr><td style="padding:5px 0;"><span style="color:#16a34a;font-weight:700;margin-right:8px;">&#10003;</span><span style="font-size:14px;color:#334155;">Custom order prefix and Odoo sequence</span></td></tr>
+          <tr><td style="padding:5px 0;"><span style="color:#16a34a;font-weight:700;margin-right:8px;">&#10003;</span><span style="font-size:14px;color:#334155;">POS order default customer fallback</span></td></tr>
+          <tr><td style="padding:5px 0;"><span style="color:#16a34a;font-weight:700;margin-right:8px;">&#10003;</span><span style="font-size:14px;color:#334155;">Gift card auto-fulfill option</span></td></tr>
+          <tr><td style="padding:5px 0;"><span style="color:#16a34a;font-weight:700;margin-right:8px;">&#10003;</span><span style="font-size:14px;color:#334155;">Tax creation or mapping to Odoo taxes</span></td></tr>
+        </table>
+      </td>
+    </tr></table>
+  </td></tr>
+</table>
+
+<!-- DIVIDER -->
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td style="height:1px;background:#e2e8f0;"></td></tr></table>
+
+<!-- ══════════ SCREENSHOTS GALLERY ══════════ -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fb;">
+  <tr><td align="center" style="padding:72px 40px 16px;">
+    <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#2563eb;margin-bottom:10px;">Screenshots</div>
+    <div style="font-size:36px;font-weight:900;color:#0f172a;letter-spacing:-0.02em;line-height:1.2;margin-bottom:12px;">See it in action</div>
+    <div style="font-size:15px;color:#64748b;max-width:520px;margin:0 auto 48px;">Every major feature has a dedicated UI built natively inside Odoo — clean, intuitive, and easy to learn.</div>
+  </td></tr>
+</table>
+
+<!-- Gallery Row 1: 2 wide -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fb;">
+  <tr><td style="padding:0 40px 20px;">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr valign="top">
+      <td width="50%" style="padding:0 10px;">
+        <div style="border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,0.06);">
+          <img src="images/queui_for_importing_mulitple_products.png" alt="Product Import Queue" width="100%" style="display:block;height:200px;object-fit:cover;object-position:top;" />
+          <div style="padding:14px 16px;">
+            <div style="font-size:13px;font-weight:700;color:#0f172a;">Product Import Queue</div>
+            <div style="font-size:12px;color:#64748b;margin-top:3px;">Bulk product import queue with status tracking and retry</div>
+          </div>
+        </div>
+      </td>
+      <td width="50%" style="padding:0 10px;">
+        <div style="border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,0.06);">
+          <img src="images/importing_order_queui.png" alt="Order Queue" width="100%" style="display:block;height:200px;object-fit:cover;object-position:top;" />
+          <div style="padding:14px 16px;">
+            <div style="font-size:13px;font-weight:700;color:#0f172a;">Order Import Queue</div>
+            <div style="font-size:12px;color:#64748b;margin-top:3px;">Order queue with error details and individual retry</div>
+          </div>
+        </div>
+      </td>
+    </tr></table>
+  </td></tr>
+</table>
+
+<!-- Gallery Row 2: 3 cols -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fb;">
+  <tr><td style="padding:0 40px 20px;">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr valign="top">
+      <td width="33%" style="padding:0 10px;">
+        <div style="border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,0.06);">
+          <img src="images/customer_queui.png" alt="Customer Queue" width="100%" style="display:block;height:170px;object-fit:cover;object-position:top;" />
+          <div style="padding:12px 14px;">
+            <div style="font-size:13px;font-weight:700;color:#0f172a;">Customer Queue</div>
+            <div style="font-size:12px;color:#64748b;margin-top:3px;">Queued customer sync from Shopify</div>
+          </div>
+        </div>
+      </td>
+      <td width="33%" style="padding:0 10px;">
+        <div style="border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,0.06);">
+          <img src="images/importing_customers.png" alt="Import Customers" width="100%" style="display:block;height:170px;object-fit:cover;object-position:top;" />
+          <div style="padding:12px 14px;">
+            <div style="font-size:13px;font-weight:700;color:#0f172a;">Import Customers</div>
+            <div style="font-size:12px;color:#64748b;margin-top:3px;">Bulk customer import wizard from Shopify</div>
+          </div>
+        </div>
+      </td>
+      <td width="33%" style="padding:0 10px;">
+        <div style="border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,0.06);">
+          <img src="images/import_customer_by_id.png" alt="Import Customer by ID" width="100%" style="display:block;height:170px;object-fit:cover;object-position:top;" />
+          <div style="padding:12px 14px;">
+            <div style="font-size:13px;font-weight:700;color:#0f172a;">Import by Shopify ID</div>
+            <div style="font-size:12px;color:#64748b;margin-top:3px;">Fetch a specific customer using Shopify ID</div>
+          </div>
+        </div>
+      </td>
+    </tr></table>
+  </td></tr>
+</table>
+
+<!-- Gallery Row 3: 3 cols -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fb;">
+  <tr><td style="padding:0 40px 20px;">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr valign="top">
+      <td width="33%" style="padding:0 10px;">
+        <div style="border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,0.06);">
+          <img src="images/import_product_by_id.png" alt="Import Product by ID" width="100%" style="display:block;height:170px;object-fit:cover;object-position:top;" />
+          <div style="padding:12px 14px;">
+            <div style="font-size:13px;font-weight:700;color:#0f172a;">Import Product by ID</div>
+            <div style="font-size:12px;color:#64748b;margin-top:3px;">Targeted import using Shopify product ID</div>
+          </div>
+        </div>
+      </td>
+      <td width="33%" style="padding:0 10px;">
+        <div style="border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,0.06);">
+          <img src="images/importing_inoventory.png" alt="Import Inventory" width="100%" style="display:block;height:170px;object-fit:cover;object-position:top;" />
+          <div style="padding:12px 14px;">
+            <div style="font-size:13px;font-weight:700;color:#0f172a;">Import Inventory</div>
+            <div style="font-size:12px;color:#64748b;margin-top:3px;">Pull stock levels from Shopify into Odoo</div>
+          </div>
+        </div>
+      </td>
+      <td width="33%" style="padding:0 10px;">
+        <div style="border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,0.06);">
+          <img src="images/importing_location.png" alt="Import Locations" width="100%" style="display:block;height:170px;object-fit:cover;object-position:top;" />
+          <div style="padding:12px 14px;">
+            <div style="font-size:13px;font-weight:700;color:#0f172a;">Import Locations</div>
+            <div style="font-size:12px;color:#64748b;margin-top:3px;">Sync Shopify locations for inventory mapping</div>
+          </div>
+        </div>
+      </td>
+    </tr></table>
+  </td></tr>
+</table>
+
+<!-- Gallery Row 4: 3 cols -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fb;">
+  <tr><td style="padding:0 40px 20px;">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr valign="top">
+      <td width="33%" style="padding:0 10px;">
+        <div style="border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,0.06);">
+          <img src="images/imporing_order.png" alt="Order Import Wizard" width="100%" style="display:block;height:170px;object-fit:cover;object-position:top;" />
+          <div style="padding:12px 14px;">
+            <div style="font-size:13px;font-weight:700;color:#0f172a;">Order Import Wizard</div>
+            <div style="font-size:12px;color:#64748b;margin-top:3px;">Trigger imports with date range filters</div>
+          </div>
+        </div>
+      </td>
+      <td width="33%" style="padding:0 10px;">
+        <div style="border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,0.06);">
+          <img src="images/importing_shipid_order.png" alt="Shipped Orders" width="100%" style="display:block;height:170px;object-fit:cover;object-position:top;" />
+          <div style="padding:12px 14px;">
+            <div style="font-size:13px;font-weight:700;color:#0f172a;">Shipped Orders Import</div>
+            <div style="font-size:12px;color:#64748b;margin-top:3px;">Import fulfilled / shipped Shopify orders</div>
+          </div>
+        </div>
+      </td>
+      <td width="33%" style="padding:0 10px;">
+        <div style="border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,0.06);">
+          <img src="images/importing_shiped_order_queui.png" alt="Shipped Order Queue" width="100%" style="display:block;height:170px;object-fit:cover;object-position:top;" />
+          <div style="padding:12px 14px;">
+            <div style="font-size:13px;font-weight:700;color:#0f172a;">Shipped Order Queue</div>
+            <div style="font-size:12px;color:#64748b;margin-top:3px;">Queue view for shipped order processing</div>
+          </div>
+        </div>
+      </td>
+    </tr></table>
+  </td></tr>
+</table>
+
+<!-- Gallery Row 5: 2 wide -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fb;">
+  <tr><td style="padding:0 40px 20px;">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr valign="top">
+      <td width="50%" style="padding:0 10px;">
+        <div style="border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,0.06);">
+          <img src="images/export_to_shopify.png" alt="Export to Shopify" width="100%" style="display:block;height:200px;object-fit:cover;object-position:top;" />
+          <div style="padding:14px 16px;">
+            <div style="font-size:13px;font-weight:700;color:#0f172a;">Export Products to Shopify</div>
+            <div style="font-size:12px;color:#64748b;margin-top:3px;">Bulk export of Odoo products to Shopify</div>
+          </div>
+        </div>
+      </td>
+      <td width="50%" style="padding:0 10px;">
+        <div style="border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,0.06);">
+          <img src="images/export_product_to_shopify_layer_in_odoo.png" alt="Product Layer" width="100%" style="display:block;height:200px;object-fit:cover;object-position:top;" />
+          <div style="padding:14px 16px;">
+            <div style="font-size:13px;font-weight:700;color:#0f172a;">Product Export Layer</div>
+            <div style="font-size:12px;color:#64748b;margin-top:3px;">Granular control over which products go to Shopify</div>
+          </div>
+        </div>
+      </td>
+    </tr></table>
+  </td></tr>
+</table>
+
+<!-- Gallery Row 6: 2 wide -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fb;">
+  <tr><td style="padding:0 40px 72px;">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr valign="top">
+      <td width="50%" style="padding:0 10px;">
+        <div style="border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,0.06);">
+          <img src="images/product_layer.png" alt="Shopify Product Layer" width="100%" style="display:block;height:200px;object-fit:cover;object-position:top;" />
+          <div style="padding:14px 16px;">
+            <div style="font-size:13px;font-weight:700;color:#0f172a;">Shopify Product Layer</div>
+            <div style="font-size:12px;color:#64748b;margin-top:3px;">Dedicated mapping layer linking Odoo products to Shopify</div>
+          </div>
+        </div>
+      </td>
+      <td width="50%" style="padding:0 10px;">
+        <div style="border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,0.06);">
+          <img src="images/upload_products_from_excel_to_odoo.png" alt="Excel Upload" width="100%" style="display:block;height:200px;object-fit:cover;object-position:top;" />
+          <div style="padding:14px 16px;">
+            <div style="font-size:13px;font-weight:700;color:#0f172a;">Excel Product Upload</div>
+            <div style="font-size:12px;color:#64748b;margin-top:3px;">Upload products from spreadsheet into Odoo &amp; Shopify</div>
+          </div>
+        </div>
+      </td>
+    </tr></table>
+  </td></tr>
+</table>
+
+<!-- DIVIDER -->
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td style="height:1px;background:#e2e8f0;"></td></tr></table>
+
+<!-- ══════════ HOW IT WORKS ══════════ -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;">
+  <tr><td align="center" style="padding:72px 40px;">
+    <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#2563eb;margin-bottom:10px;">How It Works</div>
+    <div style="font-size:36px;font-weight:900;color:#0f172a;letter-spacing:-0.02em;line-height:1.2;margin-bottom:12px;">Up and running in minutes</div>
+    <div style="font-size:15px;color:#64748b;max-width:500px;margin:0 auto 56px;">A guided setup gets you from installation to live syncing quickly — no coding required.</div>
+
+    <table cellpadding="0" cellspacing="0" width="640" style="margin:0 auto;text-align:left;">
+      <tr valign="top">
+        <td width="72" style="padding-bottom:36px;">
+          <div style="width:56px;height:56px;background:linear-gradient(135deg,#2563eb,#0ea5e9);border-radius:50%;text-align:center;line-height:56px;font-size:18px;font-weight:900;color:#fff;">1</div>
+        </td>
+        <td style="padding-left:20px;padding-bottom:36px;">
+          <div style="font-size:17px;font-weight:700;color:#0f172a;margin-bottom:6px;">Install the Module</div>
+          <div style="font-size:14px;color:#64748b;line-height:1.75;">Install from the Odoo Apps Store or clone from GitHub. Required Odoo modules (sale_management, stock, account, delivery) are declared as dependencies and install automatically.</div>
+        </td>
+      </tr>
+      <tr valign="top">
+        <td width="72" style="padding-bottom:36px;">
+          <div style="width:56px;height:56px;background:linear-gradient(135deg,#2563eb,#0ea5e9);border-radius:50%;text-align:center;line-height:56px;font-size:18px;font-weight:900;color:#fff;">2</div>
+        </td>
+        <td style="padding-left:20px;padding-bottom:36px;">
+          <div style="font-size:17px;font-weight:700;color:#0f172a;margin-bottom:6px;">Create Your Shopify Store Record</div>
+          <div style="font-size:14px;color:#64748b;line-height:1.75;">Go to Sales &#8250; Shopify Stores, click Create, and enter your Shopify store URL, Admin API access token, and configure warehouse and pricelist mappings per store.</div>
+        </td>
+      </tr>
+      <tr valign="top">
+        <td width="72" style="padding-bottom:36px;">
+          <div style="width:56px;height:56px;background:linear-gradient(135deg,#2563eb,#0ea5e9);border-radius:50%;text-align:center;line-height:56px;font-size:18px;font-weight:900;color:#fff;">3</div>
+        </td>
+        <td style="padding-left:20px;padding-bottom:36px;">
+          <div style="font-size:17px;font-weight:700;color:#0f172a;margin-bottom:6px;">Register Webhooks in Shopify</div>
+          <div style="font-size:14px;color:#64748b;line-height:1.75;">Register webhook endpoints for orders/create, refunds/create, and customers in Shopify admin. Paste the webhook secret into Odoo for HMAC-SHA256 signature verification.</div>
+        </td>
+      </tr>
+      <tr valign="top">
+        <td width="72" style="padding-bottom:36px;">
+          <div style="width:56px;height:56px;background:linear-gradient(135deg,#2563eb,#0ea5e9);border-radius:50%;text-align:center;line-height:56px;font-size:18px;font-weight:900;color:#fff;">4</div>
+        </td>
+        <td style="padding-left:20px;padding-bottom:36px;">
+          <div style="font-size:17px;font-weight:700;color:#0f172a;margin-bottom:6px;">Configure Cron Jobs &amp; Auto-Workflows</div>
+          <div style="font-size:14px;color:#64748b;line-height:1.75;">Activate scheduled actions for product export, order import, inventory sync, and price updates. Set auto-workflow rules so orders confirm, invoice, and pay themselves.</div>
+        </td>
+      </tr>
+      <tr valign="top">
+        <td width="72">
+          <div style="width:56px;height:56px;background:linear-gradient(135deg,#2563eb,#0ea5e9);border-radius:50%;text-align:center;line-height:56px;font-size:18px;font-weight:900;color:#fff;">5</div>
+        </td>
+        <td style="padding-left:20px;">
+          <div style="font-size:17px;font-weight:700;color:#0f172a;margin-bottom:6px;">Monitor Queues &amp; Enjoy Automation</div>
+          <div style="font-size:14px;color:#64748b;line-height:1.75;">Products, orders, customers, and inventory sync in the background. Failed jobs show clear error messages and can be retried individually — your stores run themselves.</div>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+</table>
+
+<!-- DIVIDER -->
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td style="height:1px;background:#e2e8f0;"></td></tr></table>
+
+<!-- ══════════ WHY CHOOSE ══════════ -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fb;">
+  <tr><td align="center" style="padding:72px 40px 48px;">
+    <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#2563eb;margin-bottom:10px;">Why Choose This Module</div>
+    <div style="font-size:36px;font-weight:900;color:#0f172a;letter-spacing:-0.02em;line-height:1.2;margin-bottom:12px;">Built for production operations</div>
+    <div style="font-size:15px;color:#64748b;max-width:520px;margin:0 auto 48px;">Every design decision optimizes for reliability, transparency, and ease of debugging in real production environments.</div>
+  </td></tr>
+</table>
+
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fb;">
+  <tr><td style="padding:0 40px 20px;">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr valign="top">
+      <td width="33%" style="padding:0 10px;">
+        <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:28px 22px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,0.05);">
+          <div style="font-size:36px;margin-bottom:14px;">&#128274;</div>
+          <div style="font-size:15px;font-weight:700;color:#0f172a;margin-bottom:8px;">Webhook Security</div>
+          <div style="font-size:13px;color:#64748b;line-height:1.65;">HMAC-SHA256 signature verification on every Shopify webhook. Forged requests are rejected before any processing begins.</div>
+        </div>
+      </td>
+      <td width="33%" style="padding:0 10px;">
+        <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:28px 22px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,0.05);">
+          <div style="font-size:36px;margin-bottom:14px;">&#128203;</div>
+          <div style="font-size:15px;font-weight:700;color:#0f172a;margin-bottom:8px;">Full Audit Trail</div>
+          <div style="font-size:13px;color:#64748b;line-height:1.65;">Every sync operation is logged with timestamps, status, and error details. Debug exactly what happened, when, and why in any queue.</div>
+        </div>
+      </td>
+      <td width="33%" style="padding:0 10px;">
+        <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:28px 22px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,0.05);">
+          <div style="font-size:36px;margin-bottom:14px;">&#9851;&#65039;</div>
+          <div style="font-size:15px;font-weight:700;color:#0f172a;margin-bottom:8px;">Retry on Failure</div>
+          <div style="font-size:13px;color:#64748b;line-height:1.65;">Failed queue jobs can be retried individually. No data loss — failed records wait safely until you fix the root cause and retry.</div>
+        </div>
+      </td>
+    </tr></table>
+  </td></tr>
+</table>
+
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fb;">
+  <tr><td style="padding:0 40px 72px;">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr valign="top">
+      <td width="33%" style="padding:0 10px;">
+        <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:28px 22px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,0.05);">
+          <div style="font-size:36px;margin-bottom:14px;">&#9889;</div>
+          <div style="font-size:15px;font-weight:700;color:#0f172a;margin-bottom:8px;">API Pagination</div>
+          <div style="font-size:13px;color:#64748b;line-height:1.65;">Handles Shopify REST API pagination automatically. Import thousands of products, orders, or customers in one operation without timeouts.</div>
+        </div>
+      </td>
+      <td width="33%" style="padding:0 10px;">
+        <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:28px 22px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,0.05);">
+          <div style="font-size:36px;margin-bottom:14px;">&#128193;</div>
+          <div style="font-size:15px;font-weight:700;color:#0f172a;margin-bottom:8px;">Clean Architecture</div>
+          <div style="font-size:13px;color:#64748b;line-height:1.65;">Services, mappers, queues, and controllers are cleanly separated. Easy to extend, maintain, and understand — built by Odoo experts.</div>
+        </div>
+      </td>
+      <td width="33%" style="padding:0 10px;">
+        <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:28px 22px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,0.05);">
+          <div style="font-size:36px;margin-bottom:14px;">&#129329;</div>
+          <div style="font-size:15px;font-weight:700;color:#0f172a;margin-bottom:8px;">Native Odoo UX</div>
+          <div style="font-size:13px;color:#64748b;line-height:1.65;">Menus, wizards, list views, and form views follow Odoo standards exactly. No custom UI frameworks — your team learns it instantly.</div>
+        </div>
+      </td>
+    </tr></table>
+  </td></tr>
+</table>
+
+<!-- DIVIDER -->
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td style="height:1px;background:#e2e8f0;"></td></tr></table>
+
+<!-- ══════════ TECH HIGHLIGHTS ══════════ -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;">
+  <tr><td align="center" style="padding:72px 40px;">
+    <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#2563eb;margin-bottom:10px;">Technical Details</div>
+    <div style="font-size:36px;font-weight:900;color:#0f172a;letter-spacing:-0.02em;line-height:1.2;margin-bottom:12px;">Solid technical foundations</div>
+    <div style="font-size:15px;color:#64748b;max-width:520px;margin:0 auto 24px;">Enterprise-grade architecture designed for performance, security, and long-term maintainability.</div>
+    <div style="margin-bottom:40px;">
+      <span style="display:inline-block;background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe;font-size:12px;font-weight:600;padding:5px 14px;border-radius:999px;margin:4px;">&#128995; Odoo 19.0</span>
+      <span style="display:inline-block;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;font-size:12px;font-weight:600;padding:5px 14px;border-radius:999px;margin:4px;">&#128013; Python 3.10+</span>
+      <span style="display:inline-block;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-size:12px;font-weight:600;padding:5px 14px;border-radius:999px;margin:4px;">&#9878;&#65039; LGPL-3 License</span>
+      <span style="display:inline-block;background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;font-size:12px;font-weight:600;padding:5px 14px;border-radius:999px;margin:4px;">&#128230; openpyxl required</span>
+    </div>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="max-width:900px;margin:0 auto;text-align:left;">
+      <tr valign="top">
+        <td width="50%" style="padding-right:10px;">
+          <div style="padding:11px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;">
+            <span style="display:inline-block;width:9px;height:9px;background:#2563eb;border-radius:50%;margin-right:10px;vertical-align:middle;"></span>
+            <span style="font-size:14px;color:#334155;font-weight:500;">Shopify Admin REST API (2024-01+)</span>
+          </div>
+          <div style="padding:11px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;">
+            <span style="display:inline-block;width:9px;height:9px;background:#0ea5e9;border-radius:50%;margin-right:10px;vertical-align:middle;"></span>
+            <span style="font-size:14px;color:#334155;font-weight:500;">HMAC-SHA256 Webhook Verification</span>
+          </div>
+          <div style="padding:11px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;">
+            <span style="display:inline-block;width:9px;height:9px;background:#10b981;border-radius:50%;margin-right:10px;vertical-align:middle;"></span>
+            <span style="font-size:14px;color:#334155;font-weight:500;">Queue-Based Async Processing</span>
+          </div>
+          <div style="padding:11px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;">
+            <span style="display:inline-block;width:9px;height:9px;background:#7c3aed;border-radius:50%;margin-right:10px;vertical-align:middle;"></span>
+            <span style="font-size:14px;color:#334155;font-weight:500;">Odoo Cron Scheduler Integration</span>
+          </div>
+          <div style="padding:11px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;">
+            <span style="display:inline-block;width:9px;height:9px;background:#f59e0b;border-radius:50%;margin-right:10px;vertical-align:middle;"></span>
+            <span style="font-size:14px;color:#334155;font-weight:500;">Multi-Store Data Isolation</span>
+          </div>
+          <div style="padding:11px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;">
+            <span style="display:inline-block;width:9px;height:9px;background:#2563eb;border-radius:50%;margin-right:10px;vertical-align:middle;"></span>
+            <span style="font-size:14px;color:#334155;font-weight:500;">Product Variant Attribute Mapping</span>
+          </div>
+          <div style="padding:11px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;">
+            <span style="display:inline-block;width:9px;height:9px;background:#0ea5e9;border-radius:50%;margin-right:10px;vertical-align:middle;"></span>
+            <span style="font-size:14px;color:#334155;font-weight:500;">Pricelist-Aware Price Export</span>
+          </div>
+          <div style="padding:11px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+            <span style="display:inline-block;width:9px;height:9px;background:#10b981;border-radius:50%;margin-right:10px;vertical-align:middle;"></span>
+            <span style="font-size:14px;color:#334155;font-weight:500;">Multi-Warehouse Inventory Mapping</span>
+          </div>
+        </td>
+        <td width="50%" style="padding-left:10px;">
+          <div style="padding:11px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;">
+            <span style="display:inline-block;width:9px;height:9px;background:#7c3aed;border-radius:50%;margin-right:10px;vertical-align:middle;"></span>
+            <span style="font-size:14px;color:#334155;font-weight:500;">Auto-Workflow Order Processing</span>
+          </div>
+          <div style="padding:11px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;">
+            <span style="display:inline-block;width:9px;height:9px;background:#f59e0b;border-radius:50%;margin-right:10px;vertical-align:middle;"></span>
+            <span style="font-size:14px;color:#334155;font-weight:500;">Excel (openpyxl) Bulk Import</span>
+          </div>
+          <div style="padding:11px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;">
+            <span style="display:inline-block;width:9px;height:9px;background:#2563eb;border-radius:50%;margin-right:10px;vertical-align:middle;"></span>
+            <span style="font-size:14px;color:#334155;font-weight:500;">API Pagination (Cursor-Based)</span>
+          </div>
+          <div style="padding:11px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;">
+            <span style="display:inline-block;width:9px;height:9px;background:#0ea5e9;border-radius:50%;margin-right:10px;vertical-align:middle;"></span>
+            <span style="font-size:14px;color:#334155;font-weight:500;">Field-Level Sync State Control</span>
+          </div>
+          <div style="padding:11px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;">
+            <span style="display:inline-block;width:9px;height:9px;background:#10b981;border-radius:50%;margin-right:10px;vertical-align:middle;"></span>
+            <span style="font-size:14px;color:#334155;font-weight:500;">Retry Policy and Error Logging</span>
+          </div>
+          <div style="padding:11px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;">
+            <span style="display:inline-block;width:9px;height:9px;background:#7c3aed;border-radius:50%;margin-right:10px;vertical-align:middle;"></span>
+            <span style="font-size:14px;color:#334155;font-weight:500;">Secure License Mixin</span>
+          </div>
+          <div style="padding:11px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;">
+            <span style="display:inline-block;width:9px;height:9px;background:#f59e0b;border-radius:50%;margin-right:10px;vertical-align:middle;"></span>
+            <span style="font-size:14px;color:#334155;font-weight:500;">Shopify Fulfillment and Tracking API</span>
+          </div>
+          <div style="padding:11px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+            <span style="display:inline-block;width:9px;height:9px;background:#2563eb;border-radius:50%;margin-right:10px;vertical-align:middle;"></span>
+            <span style="font-size:14px;color:#334155;font-weight:500;">Refund and Credit Note Synchronization</span>
+          </div>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+</table>
+
+<!-- ══════════ CTA ══════════ -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg,#0f1c3f 0%,#1a2e6b 45%,#0e3460 100%);">
+  <tr><td align="center" style="padding:80px 24px;">
+    <div style="font-size:40px;font-weight:900;color:#ffffff;letter-spacing:-0.02em;line-height:1.15;margin-bottom:16px;">Ready to connect<br>Odoo &amp; Shopify?</div>
+    <div style="font-size:17px;color:rgba(255,255,255,0.65);max-width:500px;margin:0 auto 36px;line-height:1.75;">Join businesses that have fully automated their eCommerce operations. One purchase, lifetime access, LGPL-3 license.</div>
+    <div style="margin-bottom:8px;">
+      <span style="font-size:14px;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.1em;">One-Time License</span>
+    </div>
+    <div style="margin-bottom:8px;">
+      <span style="font-size:20px;color:rgba(255,255,255,0.6);vertical-align:top;line-height:1.8;">$</span>
+      <span style="font-size:60px;font-weight:900;color:#ffffff;line-height:1;">450</span>
+    </div>
+    <div style="font-size:13px;color:rgba(255,255,255,0.4);margin-bottom:36px;">Odoo 19.0 &#183; LGPL-3 &#183; Lifetime Updates</div>
+    <div style="margin-bottom:56px;">
+      <a href="https://apps.odoo.com" style="display:inline-block;background:linear-gradient(135deg,#2563eb,#0ea5e9);color:#fff;font-size:16px;font-weight:700;padding:17px 44px;border-radius:999px;text-decoration:none;margin:6px 8px;">&#128722; Buy on Odoo App Store</a>
+      <a href="mailto:gultajkhan980@gmail.com" style="display:inline-block;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.25);color:#fff;font-size:16px;font-weight:600;padding:17px 40px;border-radius:999px;text-decoration:none;margin:6px 8px;">&#128231; Request a Demo</a>
+    </div>
+
+    <table cellpadding="0" cellspacing="0" style="margin:0 auto;">
+      <tr valign="top">
+        <td style="padding:0 12px;">
+          <div style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:24px 28px;text-align:center;min-width:160px;">
+            <img src="images/qr_email.png" alt="Email QR" width="72" height="72" style="display:block;margin:0 auto 12px;border-radius:8px;" />
+            <div style="font-size:13px;color:rgba(255,255,255,0.55);margin-bottom:4px;">Email Support</div>
+            <a href="mailto:gultajkhan980@gmail.com" style="font-size:12px;color:#67e8f9;font-weight:600;text-decoration:none;">gultajkhan980@gmail.com</a>
+          </div>
+        </td>
+        <td style="padding:0 12px;">
+          <div style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:24px 28px;text-align:center;min-width:160px;">
+            <img src="images/qr_whatsapp.png" alt="WhatsApp QR" width="72" height="72" style="display:block;margin:0 auto 12px;border-radius:8px;" />
+            <div style="font-size:13px;color:rgba(255,255,255,0.55);margin-bottom:4px;">WhatsApp Support</div>
+            <span style="font-size:12px;color:#67e8f9;font-weight:600;">Scan QR to chat</span>
+          </div>
+        </td>
+        <td style="padding:0 12px;">
+          <div style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:24px 28px;text-align:center;min-width:160px;">
+            <div style="font-size:40px;margin-bottom:12px;">&#128025;</div>
+            <div style="font-size:13px;color:rgba(255,255,255,0.55);margin-bottom:4px;">Source Code</div>
+            <a href="https://github.com/misri12/odoo_shopify_connector_pro" style="font-size:12px;color:#67e8f9;font-weight:600;text-decoration:none;">GitHub Repository</a>
+          </div>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+</table>
+
+<!-- ══════════ FOOTER ══════════ -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#0f172a;">
+  <tr><td align="center" style="padding:22px;">
+    <div style="font-size:13px;color:rgba(255,255,255,0.35);">
+      Shopify Connector Pro &nbsp;&#183;&nbsp; Odoo 19.0 &nbsp;&#183;&nbsp; by Gultaj Khan &nbsp;&#183;&nbsp; LGPL-3 License
+    </div>
+  </td></tr>
+</table>
+
+</body>
+</html>

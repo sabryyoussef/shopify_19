@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Hide invoice/delivery child contacts from main Contacts list
+         while keeping them attached inside the parent customer form -->
+
+    <record id="base.action_partner_form" model="ir.actions.act_window">
+        <field name="domain">
+            ['|',
+                ('parent_id', '=', False),
+                ('type', 'not in', ['invoice', 'delivery'])
+            ]
+        </field>
+    </record>
+
+</odoo>

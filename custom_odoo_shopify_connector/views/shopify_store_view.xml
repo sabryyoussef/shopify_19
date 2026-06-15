@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_shopify_store_list" model="ir.ui.view">
+        <field name="name">shopify.store.list</field>
+        <field name="model">shopify.store</field>
+        <field name="arch" type="xml">
+            <list string="Shopify Stores">
+                <field name="name"/>
+                <field name="shop_url"/>
+                <field name="active"/>
+                <field name="company_id"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_shopify_store_form" model="ir.ui.view">
+        <field name="name">shopify.store.form</field>
+        <field name="model">shopify.store</field>
+        <field name="arch" type="xml">
+            <form string="Shopify Store">
+                <header>
+                    <field name="active" widget="boolean_toggle"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_test_connection" type="object" class="oe_stat_button" icon="fa-plug" string="Test Connection"/>
+                        <button name="action_sync_products" type="object" class="oe_stat_button" icon="fa-cube" string="Sync Products"/>
+                        <button name="action_sync_orders" type="object" class="oe_stat_button" icon="fa-shopping-cart" string="Sync Orders"/>
+                        <button name="action_sync_customers" type="object" class="oe_stat_button" icon="fa-users" string="Sync Customers"/>
+                        <button name="action_product_sync_check" type="object" class="oe_stat_button" icon="fa-check-square-o" string="Product Sync Check"/>
+                    </div>
+                    <div class="oe_title">
+                        <h1 class="d-flex align-items-center gap-2">
+                            <field name="name" placeholder="e.g. Shopify US Store"/>
+                            <span class="badge text-bg-primary" title="Access token configured" invisible="not access_token">Connected</span>
+                            <span class="badge text-bg-warning" title="Missing access token" invisible="access_token">Needs setup</span>
+                        </h1>
+                        <div class="text-muted small">
+                            <field name="shop_url" placeholder="https://your-store.myshopify.com"/>
+                        </div>
+                    </div>
+                    <notebook>
+                        <page string="General">
+                            <group>
+                                <group>
+                                    <field name="company_id"/>
+                                    <field name="default_unshipped_order_warehouse_id"/>
+                                    <field name="sale_auto_workflow_id"/>
+                                </group>
+                                <group>
+                                    <field name="access_token" password="True" placeholder="Admin API access token"/>
+                                    <field name="api_key" placeholder="Optional (legacy)"/>
+                                    <field name="api_secret" password="True" placeholder="Optional (legacy)"/>
+                                    <field name="webhook_secret" password="True" placeholder="Webhook signing secret"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Products">
+                            <group>
+                                <group string="Import">
+                                    <field name="auto_create_product_if_not_found"/>
+                                    <field name="import_sales_description"/>
+                                    <field name="sync_product_images"/>
+                                </group>
+                                <group string="Export">
+                                    <field name="use_odoo_description_on_export"/>
+                                    <field name="shopify_pricelist_id"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Orders">
+                            <group>
+                                <group string="Import">
+                                    <field name="order_import_salesperson_id"/>
+                                    <field name="import_order_status"/>
+                                    <field name="use_odoo_sequence"/>
+                                    <field name="order_prefix" invisible="use_odoo_sequence"/>
+                                    <field name="default_pos_customer_id"/>
+                                    <field name="auto_fulfill_gift_card"/>
+                                    <field name="manage_orders_webhook"/>
+                                </group>
+                                <group string="Shipping Status Sync (Odoo → Shopify)">
+                                    <field name="update_shipping_sync_enabled"/>
+                                    <field name="update_shipping_interval_number" invisible="not update_shipping_sync_enabled"/>
+                                    <field name="update_shipping_interval_type" invisible="not update_shipping_sync_enabled"/>
+                                    <field name="last_shipping_sync_time" readonly="1" invisible="not update_shipping_sync_enabled"/>
+                                </group>
+                                <group string="Shipped Orders Import (Shopify → Odoo)">
+                                    <field name="import_shipped_orders_enabled"/>
+                                    <field name="import_shipped_orders_interval_number" invisible="not import_shipped_orders_enabled"/>
+                                    <field name="import_shipped_orders_interval_type" invisible="not import_shipped_orders_enabled"/>
+                                    <field name="last_shipped_orders_import_time" readonly="1" invisible="not import_shipped_orders_enabled"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Inventory">
+                            <group>
+                                <group string="Export">
+                                    <field name="shopify_stock_type"/>
+                                    <field name="export_stock_enabled"/>
+                                    <field name="export_stock_interval_number" invisible="not export_stock_enabled"/>
+                                    <field name="export_stock_interval_type" invisible="not export_stock_enabled"/>
+                                    <field name="last_stock_export_time" readonly="1" invisible="not export_stock_enabled"/>
+                                </group>
+                                <group string="Location">
+                                    <field name="shopify_location_id"/>
+                                </group>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Optional graph view to analyze stores by company / active flag -->
+    <record id="view_shopify_store_graph" model="ir.ui.view">
+        <field name="name">shopify.store.graph</field>
+        <field name="model">shopify.store</field>
+        <field name="arch" type="xml">
+            <graph string="Shopify Stores" type="bar">
+                <field name="id" type="measure" string="Stores"/>
+                <field name="company_id"/>
+                <field name="active"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="action_shopify_store" model="ir.actions.act_window">
+        <field name="name">Shopify Stores</field>
+        <field name="res_model">shopify.store</field>
+        <field name="view_mode">list,form,graph</field>
+    </record>
+
+</odoo>
+

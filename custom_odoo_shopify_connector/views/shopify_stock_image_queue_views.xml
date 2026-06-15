@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_shopify_stock_queue_list" model="ir.ui.view">
+        <field name="name">shopify.stock.queue.list</field>
+        <field name="model">shopify.stock.queue</field>
+        <field name="arch" type="xml">
+            <list string="Stock Export Queue">
+                <field name="create_date"/>
+                <field name="name"/>
+                <field name="store_id"/>
+                <field name="operation_type"/>
+                <field name="status"/>
+                <field name="error_message"/>
+                <field name="products_to_process"/>
+                <field name="processed_products"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_shopify_stock_queue_search" model="ir.ui.view">
+        <field name="name">shopify.stock.queue.search</field>
+        <field name="model">shopify.stock.queue</field>
+        <field name="arch" type="xml">
+            <search string="Search Stock Queue">
+                <field name="name"/>
+                <field name="store_id"/>
+                <field name="status"/>
+                <filter name="pending" string="Pending" domain="[('status', '=', 'pending')]"/>
+                <filter name="processing" string="Processing" domain="[('status', '=', 'processing')]"/>
+                <filter name="failed" string="Failed" domain="[('status', '=', 'failed')]"/>
+                <filter name="done" string="Done" domain="[('status', '=', 'done')]"/>
+                <filter name="last_24h" string="Last 24h" domain="[('create_date', '>=', (context_today() - relativedelta(days=1)).strftime('%%Y-%%m-%%d 00:00:00'))]"/>
+                <separator/>
+                <filter name="by_store" string="By Store" context="{'group_by': 'store_id'}"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_shopify_image_update_queue_list" model="ir.ui.view">
+        <field name="name">shopify.image.update.queue.list</field>
+        <field name="model">shopify.image.update.queue</field>
+        <field name="arch" type="xml">
+            <list string="Product Image Queue">
+                <field name="create_date"/>
+                <field name="name"/>
+                <field name="store_id"/>
+                <field name="operation_type"/>
+                <field name="status"/>
+                <field name="error_message"/>
+                <field name="products_to_process"/>
+                <field name="processed_products"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_shopify_image_update_queue_search" model="ir.ui.view">
+        <field name="name">shopify.image.update.queue.search</field>
+        <field name="model">shopify.image.update.queue</field>
+        <field name="arch" type="xml">
+            <search string="Search Image Queue">
+                <field name="name"/>
+                <field name="store_id"/>
+                <field name="status"/>
+                <filter name="pending" string="Pending" domain="[('status', '=', 'pending')]"/>
+                <filter name="processing" string="Processing" domain="[('status', '=', 'processing')]"/>
+                <filter name="failed" string="Failed" domain="[('status', '=', 'failed')]"/>
+                <filter name="done" string="Done" domain="[('status', '=', 'done')]"/>
+                <filter name="last_24h" string="Last 24h" domain="[('create_date', '>=', (context_today() - relativedelta(days=1)).strftime('%%Y-%%m-%%d 00:00:00'))]"/>
+                <separator/>
+                <filter name="by_store" string="By Store" context="{'group_by': 'store_id'}"/>
+            </search>
+        </field>
+    </record>
+
+</odoo>

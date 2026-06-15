@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_shopify_order_queue_list" model="ir.ui.view">
+        <field name="name">shopify.order.queue.list</field>
+        <field name="model">shopify.order.queue</field>
+        <field name="arch" type="xml">
+            <list string="Shopify Order Queue"
+                  default_order="create_date desc"
+                  decoration-danger="state == 'failed'"
+                  decoration-success="state == 'done'">
+                <field name="store_id"/>
+                <field name="order_display_name"/>
+                <field name="shopify_order_id" optional="show"/>
+                <field name="state" widget="badge"
+                       decoration-danger="state == 'failed'"
+                       decoration-success="state == 'done'"
+                       decoration-warning="state in ('pending','processing')"/>
+                <field name="write_date" string="Last Run" optional="show"/>
+                <field name="next_retry_at" string="Next Retry" optional="show"/>
+                <field name="retry_count" string="Retries" optional="hide"/>
+                <field name="error_summary" optional="show"/>
+                <field name="create_date" string="Queued" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_shopify_order_queue_search" model="ir.ui.view">
+        <field name="name">shopify.order.queue.search</field>
+        <field name="model">shopify.order.queue</field>
+        <field name="arch" type="xml">
+            <search string="Search Order Queue">
+                <field name="shopify_order_id"/>
+                <field name="store_id"/>
+                <field name="state"/>
+                <filter name="pending" string="Pending" domain="[('state', '=', 'pending')]"/>
+                <filter name="processing" string="Processing" domain="[('state', '=', 'processing')]"/>
+                <filter name="failed" string="Failed" domain="[('state', '=', 'failed')]"/>
+                <filter name="done" string="Done" domain="[('state', '=', 'done')]"/>
+                <filter name="last_24h" string="Last 24h" domain="[('create_date', '>=', (context_today() - relativedelta(days=1)).strftime('%%Y-%%m-%%d 00:00:00'))]"/>
+                <separator/>
+                <filter name="by_state" string="By State" context="{'group_by': 'state'}"/>
+                <filter name="by_store" string="By Store" context="{'group_by': 'store_id'}"/>
+
+                <searchpanel>
+                    <field name="store_id" enable_counters="1"/>
+                    <field name="state" enable_counters="1" select="multi"/>
+                </searchpanel>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_shopify_sync_log_search" model="ir.ui.view">
+        <field name="name">shopify.sync.log.search</field>
+        <field name="model">shopify.sync.log</field>
+        <field name="arch" type="xml">
+            <search string="Search Sync Logs">
+                <field name="message"/>
+                <field name="store_id"/>
+                <field name="operation"/>
+                <field name="status"/>
+                <separator/>
+                <filter name="group_by_store" string="By Store" context="{'group_by': 'store_id'}"/>
+                <filter name="group_by_operation" string="By Operation" context="{'group_by': 'operation'}"/>
+                <filter name="group_by_status" string="By Status" context="{'group_by': 'status'}"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- action_shopify_sync_log must be defined after search view and BEFORE
+         the form view that references it via %(action_shopify_sync_log)d -->
+    <record id="action_shopify_sync_log" model="ir.actions.act_window">
+        <field name="name">Sync Log</field>
+        <field name="res_model">shopify.sync.log</field>
+        <field name="view_mode">list,form,graph</field>
+        <field name="search_view_id" ref="view_shopify_sync_log_search"/>
+    </record>
+
+    <record id="view_shopify_order_queue_form" model="ir.ui.view">
+        <field name="name">shopify.order.queue.form</field>
+        <field name="model">shopify.order.queue</field>
+        <field name="arch" type="xml">
+            <form string="Shopify Order Queue">
+                <header>
+                    <button name="action_retry_failed"
+                            type="object"
+                            string="Retry now"
+                            class="btn-primary"
+                            invisible="state != 'failed'"
+                            confirm="This will retry processing this queued order. Continue?"/>
+                    <button name="action_reset_to_pending"
+                            type="object"
+                            string="Reset to pending"
+                            class="btn-secondary"
+                            invisible="state == 'pending'"
+                            confirm="This will mark the record as pending so it can be picked up again. Continue?"/>
+                    <button name="action_fetch_orders"
+                            type="object"
+                            string="Fetch Orders"
+                            class="btn-secondary"
+                            confirm="This will fetch/enqueue new Shopify orders for this store. Continue?"/>
+                    <button name="%(action_shopify_sync_log)d"
+                            type="action"
+                            string="Open sync logs"
+                            class="btn-secondary"
+                            context="{'search_default_store_id': store_id and store_id.id or False}"/>
+                    <button name="action_open_related_records" type="object" string="Open Related Records" class="btn-secondary"/>
+                    <field name="state" widget="statusbar" statusbar_visible="pending,processing,done,failed"/>
+                    <field name="retry_count" string="Retries" readonly="1"/>
+                    <field name="last_error" string="Last Error" readonly="1"/>
+                    <field name="write_date" string="Last Run" readonly="1"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h2 class="mb-0">
+                            Order <field name="order_display_name" class="oe_inline"/>
+                        </h2>
+                        <div class="text-muted small">
+                            Store: <field name="store_id" class="oe_inline"/>
+                        </div>
+                        <div class="text-muted small">
+                            Shopify ID: <field name="shopify_order_id" class="oe_inline"/>
+                        </div>
+                    </div>
+
+                    <group>
+                        <group string="Queue">
+                            <field name="state" widget="badge"
+                                   decoration-danger="state == 'failed'"
+                                   decoration-success="state == 'done'"
+                                   decoration-warning="state in ('pending','processing')"/>
+                            <field name="next_retry_at" readonly="1"/>
+                            <field name="retry_count" readonly="1"/>
+                        </group>
+                        <group string="Last run">
+                            <field name="write_date" readonly="1"/>
+                            <field name="last_error" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <div class="alert alert-warning mt-2 mb-0" role="alert" invisible="state != 'failed'">
+                        <div class="fw-semibold">Failed — review, then retry</div>
+                        <div class="small text-muted">
+                            Check the error details below and review recent sync logs. After fixing configuration/mappings, retry this job.
+                        </div>
+                    </div>
+
+                    <notebook class="mt-2">
+                        <page string="Details">
+                            <group>
+                                <field name="log_message" placeholder="Operational notes from the queue processor."/>
+                                <field name="error_message" readonly="1"/>
+                            </group>
+                        </page>
+                        <page string="Payload (Shopify)">
+                            <field name="payload" nolabel="1"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Graph view: queue volume by state / store / day -->
+    <record id="view_shopify_order_queue_graph" model="ir.ui.view">
+        <field name="name">shopify.order.queue.graph</field>
+        <field name="model">shopify.order.queue</field>
+        <field name="arch" type="xml">
+            <graph string="Order Queue" type="bar">
+                <field name="id" type="measure" string="Records"/>
+                <field name="store_id"/>
+                <field name="state"/>
+                <field name="create_date" interval="day"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="action_shopify_order_queue" model="ir.actions.act_window">
+        <field name="name">Order Queue</field>
+        <field name="res_model">shopify.order.queue</field>
+        <field name="view_mode">list,form,graph</field>
+        <field name="search_view_id" ref="view_shopify_order_queue_search"/>
+    </record>
+
+    <record id="view_shopify_sync_log_list" model="ir.ui.view">
+        <field name="name">shopify.sync.log.list</field>
+        <field name="model">shopify.sync.log</field>
+        <field name="arch" type="xml">
+            <list string="Shopify Sync Logs">
+                <field name="create_date" string="Created"/>
+                <field name="date"/>
+                <field name="store_id"/>
+                <field name="operation"/>
+                <field name="status"/>
+                <field name="message"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_shopify_sync_log_form" model="ir.ui.view">
+        <field name="name">shopify.sync.log.form</field>
+        <field name="model">shopify.sync.log</field>
+        <field name="arch" type="xml">
+            <form string="Shopify Sync Log">
+                <sheet>
+                    <group>
+                        <field name="create_date" string="Created"/>
+                        <field name="date"/>
+                        <field name="store_id"/>
+                        <field name="operation"/>
+                        <field name="status"/>
+                    </group>
+                    <group>
+                        <field name="message"/>
+                        <field name="payload"/>
+                        <field name="response"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Graph view: logs by type / status over time -->
+    <record id="view_shopify_sync_log_graph" model="ir.ui.view">
+        <field name="name">shopify.sync.log.graph</field>
+        <field name="model">shopify.sync.log</field>
+        <field name="arch" type="xml">
+            <graph string="Shopify Sync Logs" type="bar">
+                <field name="id" type="measure" string="Entries"/>
+                <field name="operation"/>
+                <field name="status"/>
+                <field name="date" interval="day"/>
+            </graph>
+        </field>
+    </record>
+
+    <!-- action_shopify_sync_log moved above view_shopify_order_queue_form to
+         avoid forward-reference error during XML data loading. -->
+
+</odoo>
+

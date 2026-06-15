@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_shopify_payment_gateway_tree" model="ir.ui.view">
+        <field name="name">shopify.payment.gateway.tree</field>
+        <field name="model">shopify.payment.gateway</field>
+        <field name="arch" type="xml">
+            <list string="Shopify Payment Gateways">
+                <field name="name"/>
+                <field name="instance_id"/>
+                <field name="payment_code"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_shopify_payment_gateway_form" model="ir.ui.view">
+        <field name="name">shopify.payment.gateway.form</field>
+        <field name="model">shopify.payment.gateway</field>
+        <field name="arch" type="xml">
+            <form string="Shopify Payment Gateway">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="instance_id"/>
+                        </group>
+                        <group>
+                            <field name="payment_code"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_shopify_payment_gateway_search" model="ir.ui.view">
+        <field name="name">shopify.payment.gateway.search</field>
+        <field name="model">shopify.payment.gateway</field>
+        <field name="arch" type="xml">
+            <search string="Shopify Payment Gateways">
+                <field name="name"/>
+                <field name="instance_id"/>
+                <field name="payment_code"/>
+                <filter string="Active" name="active" domain="[('active', '=', True)]"/>
+                <filter string="Archived" name="inactive" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_shopify_payment_gateway" model="ir.actions.act_window">
+        <field name="name">Payment Gateways</field>
+        <field name="res_model">shopify.payment.gateway</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_shopify_payment_gateway_search"/>
+    </record>
+
+    <!-- Legacy Payment Gateways menu removed; Payment Gateways now available
+         under Configuration in views/shopify_menu.xml. -->
+
+</odoo>
+

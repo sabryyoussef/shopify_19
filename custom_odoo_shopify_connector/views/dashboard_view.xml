@@ -1,0 +1,310 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Wizard action must be defined before views that reference it -->
+    <record id="action_shopify_operations_wizard" model="ir.actions.act_window">
+        <field name="name">Shopify Operations</field>
+        <field name="res_model">shopify.operations.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="context">{}</field>
+    </record>
+
+    <!-- Shopify Dashboard: one tile per store with clear stats and primary action -->
+    <record id="view_shopify_store_kanban_dashboard" model="ir.ui.view">
+        <field name="name">shopify.store.kanban.dashboard</field>
+        <field name="model">shopify.store</field>
+        <field name="arch" type="xml">
+            <kanban class="o_kanban_shopify_dashboard o_kanban_ungrouped">
+                <field name="dashboard_failed_count"/>
+                <field name="dashboard_pending_count"/>
+                <field name="dashboard_last_success_time"/>
+                <field name="dashboard_product_count"/>
+                <field name="dashboard_customer_count"/>
+                <field name="dashboard_order_count"/>
+                <field name="has_sync_data"/>
+                <field name="access_token"/>
+                <field name="active"/>
+                <templates>
+                    <t t-name="card">
+                        <div class="oe_kanban_card o_kanban_record">
+                            <div class="oe_kanban_content">
+                                <!-- Header -->
+                                <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                                    <div class="o_kanban_primary o_kanban_primary_left">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <strong class="o_text_overflow">
+                                                <field name="name"/>
+                                            </strong>
+                                            <t t-if="record.active.raw_value">
+                                                <span class="badge text-bg-success" title="Store is active">Active</span>
+                                            </t>
+                                            <t t-else="">
+                                                <span class="badge text-bg-secondary" title="Store is archived">Archived</span>
+                                            </t>
+                                            <t t-if="record.access_token.raw_value">
+                                                <span class="badge text-bg-primary" title="Access token configured">Connected</span>
+                                            </t>
+                                            <t t-else="">
+                                                <span class="badge text-bg-warning" title="Access token is missing">Needs setup</span>
+                                            </t>
+                                        </div>
+                                        <div class="text-muted o_text_overflow small mt-1">
+                                            <field name="shop_url"/>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex gap-1">
+                                        <a type="edit" class="btn btn-light btn-sm" title="Open store settings">
+                                            Settings
+                                        </a>
+                                    </div>
+                                </div>
+
+                                <!-- Health -->
+                                <div class="o_kanban_secondary mt-2">
+                                    <div class="card border-0 bg-light">
+                                        <div class="card-body py-2 px-3">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="text-muted small">Failed jobs</span>
+                                                <t t-if="record.dashboard_failed_count.raw_value">
+                                                    <button type="object"
+                                                            name="action_dashboard_open_failed_jobs"
+                                                            class="btn btn-link p-0 fw-semibold text-danger"
+                                                            title="Open failed jobs for this store">
+                                                        <field name="dashboard_failed_count"/>
+                                                    </button>
+                                                </t>
+                                                <t t-else="">
+                                                    <span class="fw-semibold text-danger">
+                                                        <field name="dashboard_failed_count"/>
+                                                    </span>
+                                                </t>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center mt-1">
+                                                <span class="text-muted small">Pending jobs</span>
+                                                <t t-if="record.dashboard_pending_count.raw_value">
+                                                    <button type="object"
+                                                            name="action_dashboard_open_pending_jobs"
+                                                            class="btn btn-link p-0 fw-semibold text-warning"
+                                                            title="Open pending jobs for this store">
+                                                        <field name="dashboard_pending_count"/>
+                                                    </button>
+                                                </t>
+                                                <t t-else="">
+                                                    <span class="fw-semibold text-warning">
+                                                        <field name="dashboard_pending_count"/>
+                                                    </span>
+                                                </t>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center mt-1">
+                                                <span class="text-muted small">Last successful sync</span>
+                                                <span class="small">
+                                                    <field name="dashboard_last_success_time"/>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <t t-if="record.has_sync_data.raw_value">
+                                    <div class="mt-3">
+                                        <div class="row g-2">
+                                            <div class="col-4">
+                                                <div class="card border-0 bg-white shadow-sm h-100">
+                                                    <div class="card-body p-2 text-center">
+                                                        <div class="text-muted small">Products</div>
+                                                        <div class="h6 mb-0">
+                                                            <field name="dashboard_product_count"/>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-4">
+                                                <div class="card border-0 bg-white shadow-sm h-100">
+                                                    <div class="card-body p-2 text-center">
+                                                        <div class="text-muted small">Customers</div>
+                                                        <div class="h6 mb-0">
+                                                            <field name="dashboard_customer_count"/>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-4">
+                                                <div class="card border-0 bg-white shadow-sm h-100">
+                                                    <div class="card-body p-2 text-center">
+                                                        <div class="text-muted small">Orders</div>
+                                                        <div class="h6 mb-0">
+                                                            <field name="dashboard_order_count"/>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </t>
+                                <t t-else="">
+                                    <div class="alert alert-info mt-3 mb-0" role="alert">
+                                        <div class="fw-semibold">No sync activity yet</div>
+                                        <div class="small">
+                                            Run an operation to start importing products, customers, or orders.
+                                        </div>
+                                    </div>
+                                </t>
+
+                                <!-- Footer: quick actions -->
+                                <div class="o_kanban_footer mt-3 d-flex flex-wrap gap-2">
+                                    <button type="action"
+                                            name="%(action_shopify_operations_wizard)d"
+                                            string="Sync / Import…"
+                                            class="btn btn-primary"
+                                            context="{'default_store_id': id}"/>
+                                    <button type="object"
+                                            name="action_dashboard_open_queue_monitor"
+                                            string="Queue Monitor"
+                                            class="btn btn-light"/>
+                                    <button type="object"
+                                            name="action_sync_orders"
+                                            string="Fetch Orders"
+                                            class="btn btn-light"
+                                            confirm="This will fetch/enqueue Shopify orders for this store. Continue?"/>
+                                    <t t-if="record.dashboard_failed_count.raw_value">
+                                        <button type="object"
+                                                name="action_reset_failed_jobs"
+                                                string="Reset Failed"
+                                                class="btn btn-light"
+                                                confirm="This will reset all failed queue jobs for this store. Continue?"/>
+                                    </t>
+                                    <button type="action"
+                                            name="%(custom_odoo_shopify_connector.action_shopify_error_log)d"
+                                            string="Errors"
+                                            class="btn btn-light"
+                                            context="{'search_default_instance_id': id, 'search_default_failed': 1}"/>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="action_shopify_dashboard" model="ir.actions.act_window">
+        <field name="name">Shopify Dashboard</field>
+        <field name="res_model">shopify.store</field>
+        <field name="view_mode">kanban,list,form</field>
+    </record>
+
+    <!-- Wizard to perform operations such as Import Products -->
+    <record id="view_shopify_operations_wizard_form" model="ir.ui.view">
+        <field name="name">shopify.operations.wizard.form</field>
+        <field name="model">shopify.operations.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Shopify Operations">
+                <sheet>
+                    <div class="oe_title mb-2">
+                        <h2 class="mb-0">Run Shopify Operation</h2>
+                        <div class="text-muted small">
+                            Choose a store, select an operation, then review only the options that apply before running.
+                        </div>
+                    </div>
+
+                    <separator string="Step 1: Choose Store and Operation"/>
+
+                    <group class="mt-2 mb-2">
+                        <group>
+                            <field name="store_id"
+                                   string="Shopify Store"
+                                   required="1"
+                                   class="o_required_modifier"
+                                   options="{'no_create': True}"
+                                   help="Store where the selected operation will run."/>
+                            <field name="operation"
+                                   string="Operation"
+                                   required="1"
+                                   class="o_required_modifier"
+                                   help="Pick the exact sync/import task to execute."/>
+                        </group>
+                        <group>
+                            <div class="text-muted small">
+                                Tip: For first-time setup, start with <strong>Import Products</strong>, then monitor progress in Queue Monitor.
+                            </div>
+                        </group>
+                    </group>
+
+                    <separator string="Step 2: Configure Operation Options" class="mt-3"/>
+
+                    <group class="mb-2" col="1">
+                        <group invisible="operation != 'specific_product'">
+                            <field name="shopify_product_id"
+                                   string="Shopify Product ID"
+                                   help="Numeric Shopify product ID to import for 'Specific Product' operation."
+                                   placeholder="e.g. 7821491896406"/>
+                        </group>
+
+                        <group invisible="operation != 'specific_customer'">
+                            <field name="shopify_customer_id"
+                                   string="Shopify Customer ID"
+                                   help="Numeric Shopify customer ID to import for 'Specific Customer' operation."
+                                   placeholder="e.g. 6743210987654"/>
+                        </group>
+
+                        <group invisible="operation != 'upload_products'">
+                            <field name="file_data"
+                                   string="Excel File (.xlsx)"
+                                   help="Upload the template file when using 'Upload Products'."
+                                   filename="file_filename"/>
+                            <field name="file_filename" invisible="1"/>
+                        </group>
+
+                        <group string="Import Filters" invisible="operation != 'import_products'">
+                            <field name="import_based_on" help="Choose whether date filtering uses created date or updated date."/>
+                            <field name="from_date" help="Import products on/after this date."/>
+                            <field name="to_date" help="Import products on/before this date."/>
+                            <div class="text-muted small mt-1">
+                                Use these filters to queue only a controlled range of products.
+                            </div>
+                        </group>
+
+                        <group string="Shipped Orders Window" invisible="operation != 'import_shipped_orders'">
+                            <field name="start_date" help="Fetch shipped orders from this date/time onward."/>
+                            <field name="end_date" help="Fetch shipped orders up to this date/time."/>
+                            <div class="text-muted small mt-1">
+                                Only orders shipped between these dates will be fetched from Shopify.
+                            </div>
+                        </group>
+                    </group>
+
+                    <div class="alert alert-light border mt-2 mb-0" invisible="operation != 'upload_products'">
+                        <div class="fw-semibold mb-1">Excel template</div>
+                        <div class="small text-muted">
+                            Upload a <strong>.xlsx</strong> file with columns:
+                            <span class="badge text-bg-secondary">Name</span>
+                            <span class="badge text-bg-secondary">Description</span>
+                            <span class="badge text-bg-secondary">SKU</span>
+                            <span class="badge text-bg-secondary">List Price</span>
+                            <span class="badge text-bg-secondary">Cost</span>
+                            <span class="badge text-bg-secondary">Category</span>
+                            <span class="badge text-bg-secondary">Barcode</span>
+                            (first row must contain headers).
+                        </div>
+                    </div>
+
+                    <separator string="Step 3: Run"/>
+                    <div class="text-muted small">
+                        Click <strong>Run Operation</strong> to create the job. Processing continues in background queues.
+                    </div>
+
+                    <footer>
+                        <button string="Run Operation"
+                                name="action_execute"
+                                type="object"
+                                class="btn-primary"/>
+                        <button string="Close" special="cancel" class="btn-secondary"/>
+                    </footer>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+</odoo>
+

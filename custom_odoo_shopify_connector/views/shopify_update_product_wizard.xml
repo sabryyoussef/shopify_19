@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Wizard view: update existing Shopify products -->
+    <record id="view_shopify_update_product_wizard_form" model="ir.ui.view">
+        <field name="name">shopify.update.product.wizard.form</field>
+        <field name="model">shopify.update.product.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Update Existing Product">
+                <sheet>
+                    <separator string="Step 1: Select Scope"/>
+                    <group class="mt-2 mb-2">
+                        <field name="store_id"
+                               string="Shopify Store"
+                               required="1"
+                               options="{'no_create': True}"
+                               help="Store where selected products will be updated."/>
+                        <field name="product_ids"
+                               string="Products"
+                               widget="many2many_tags"
+                               options="{'no_create': True}"
+                               help="Choose one or more products to update in Shopify."/>
+                    </group>
+
+                    <separator string="Step 2: Choose What to Update"/>
+                    <group string="Update Options" class="mb-2">
+                        <group>
+                            <field name="update_price" help="Update Shopify variant prices using the store pricelist."/>
+                            <field name="update_inventory" help="Update inventory quantities to Shopify."/>
+                        </group>
+                        <group>
+                            <field name="update_description" help="Update product descriptions in Shopify."/>
+                            <field name="update_image" help="Update product images in Shopify."/>
+                        </group>
+                    </group>
+
+                    <separator string="Step 3: Review Notes"/>
+                    <p class="text-muted">
+                        Price updates use the Shopify Pricelist configured on the selected Shopify store.
+                        Multiple products and variants can be processed in the background via a price update queue.
+                    </p>
+                    <p class="text-muted">
+                        Note: currently only Price and Product Image updates are supported.
+                    </p>
+                </sheet>
+                <footer>
+                    <button name="action_update_products"
+                            string="Run Product Update"
+                            type="object"
+                            class="btn-primary"/>
+                    <button string="Close" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action: open Shopify Update Product wizard from Shopify Products (layer) or products -->
+    <record id="action_shopify_update_product_wizard" model="ir.actions.act_window">
+        <field name="name">Update Existing Product</field>
+        <field name="res_model">shopify.update.product.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <!-- Available from Shopify Products list (shopify.product.layer) -->
+        <field name="binding_model_id" ref="custom_odoo_shopify_connector.model_shopify_product_layer"/>
+    </record>
+
+</odoo>
+

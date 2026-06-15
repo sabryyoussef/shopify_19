@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Common actions for existing models to plug into new menu -->
+
+    <record id="action_shopify_store" model="ir.actions.act_window">
+        <field name="name">Shopify Stores</field>
+        <field name="res_model">shopify.store</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="action_shopify_location" model="ir.actions.act_window">
+        <field name="name">Locations</field>
+        <field name="res_model">shopify.location</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="action_shopify_payment_gateway" model="ir.actions.act_window">
+        <field name="name">Payment Gateways</field>
+        <field name="res_model">shopify.payment.gateway</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="action_shopify_delivery_carrier" model="ir.actions.act_window">
+        <field name="name">Delivery Methods</field>
+        <field name="res_model">delivery.carrier</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="action_shopify_financial_status" model="ir.actions.act_window">
+        <field name="name">Order Status Mapping</field>
+        <field name="res_model">shopify.financial.status</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="action_shopify_webhook_handler" model="ir.actions.act_window">
+        <field name="name">Webhooks</field>
+        <field name="res_model">shopify.webhook.handler</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="action_shopify_products" model="ir.actions.act_window">
+        <field name="name">Products</field>
+        <field name="res_model">product.product</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[]</field>
+    </record>
+
+    <record id="action_shopify_product_templates" model="ir.actions.act_window">
+        <field name="name">Product Templates</field>
+        <field name="res_model">product.template</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">['|', ('shopify_product_id','!=',False), ('shopify_product_map_ids','!=',False)]</field>
+    </record>
+
+    <record id="action_shopify_variant_products" model="ir.actions.act_window">
+        <field name="name">Product Variants</field>
+        <field name="res_model">product.product</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">['|', ('shopify_variant_id','!=',False), ('shopify_variant_map_ids','!=',False)]</field>
+    </record>
+
+    <record id="action_shopify_product_map" model="ir.actions.act_window">
+        <field name="name">Product Mapping</field>
+        <field name="res_model">shopify.product.map</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="action_shopify_image_update_queue" model="ir.actions.act_window">
+        <field name="name">Product Images</field>
+        <field name="res_model">shopify.image.update.queue</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_shopify_image_update_queue_search"/>
+        <field name="context">{'search_default_pending': 1}</field>
+    </record>
+
+    <record id="action_shopify_res_partner" model="ir.actions.act_window">
+        <field name="name">Customers</field>
+        <field name="res_model">res.partner</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('shopify_customer_id','!=',False),('parent_id','=',False)]</field>
+    </record>
+
+    <record id="action_shopify_order_queue" model="ir.actions.act_window">
+        <field name="name">Order Queue</field>
+        <field name="res_model">shopify.order.queue</field>
+        <field name="view_mode">list,form,graph</field>
+        <field name="search_view_id" ref="view_shopify_order_queue_search"/>
+        <field name="context">{}</field>
+    </record>
+
+    <record id="action_shopify_refunds" model="ir.actions.act_window">
+        <field name="name">Refunds</field>
+        <field name="res_model">account.move</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('shopify_refund_id','!=',False)]</field>
+    </record>
+
+    <record id="action_shopify_stock_quant" model="ir.actions.act_window">
+        <field name="name">Inventory Levels</field>
+        <field name="res_model">stock.quant</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="action_shopify_stock_queue" model="ir.actions.act_window">
+        <field name="name">Stock Export Queue</field>
+        <field name="res_model">shopify.stock.queue</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_shopify_stock_queue_search"/>
+        <field name="context">{'search_default_pending': 1}</field>
+    </record>
+
+    <record id="action_shopify_deliveries" model="ir.actions.act_window">
+        <field name="name">Deliveries</field>
+        <field name="res_model">stock.picking</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('shopify_shipping_status','!=',False)]</field>
+    </record>
+
+    <record id="action_shopify_shipping_queue" model="ir.actions.act_window">
+        <field name="name">Tracking Export</field>
+        <field name="res_model">shopify.import.queue</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="action_shopify_product_queue" model="ir.actions.act_window">
+        <field name="name">Product Queue</field>
+        <field name="res_model">shopify.product.queue</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="action_shopify_customer_import_queue" model="ir.actions.act_window">
+        <field name="name">Customer Queue</field>
+        <field name="res_model">shopify.customer.import.queue</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="action_shopify_import_queue" model="ir.actions.act_window">
+        <field name="name">Import Queue</field>
+        <field name="res_model">shopify.import.queue</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="action_shopify_export_stock_wizard" model="ir.actions.act_window">
+        <field name="name">Export Stock</field>
+        <field name="res_model">shopify.export.stock.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <record id="action_shopify_price_update_queue" model="ir.actions.act_window">
+        <field name="name">Price Update Queue</field>
+        <field name="res_model">shopify.price.update.queue</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="action_shopify_sync_log" model="ir.actions.act_window">
+        <field name="name">Sync Log</field>
+        <field name="res_model">shopify.sync.log</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <!-- Actions for new models are already defined in shopify_extra_models_views.xml -->
+
+</odoo>
+

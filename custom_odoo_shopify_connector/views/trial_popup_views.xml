@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_shopify_trial_popup_wizard_form" model="ir.ui.view">
+        <field name="name">shopify.trial.popup.wizard.form</field>
+        <field name="model">shopify.trial.popup.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Trial Version" class="o_form_readonly">
+                <sheet>
+                    <div class="alert alert-warning" role="alert">
+                        <field name="message" nolabel="1" widget="html" readonly="1"/>
+                    </div>
+                    <footer>
+                        <button string="Continue"
+                                name="action_continue"
+                                type="object"
+                                class="btn-primary"/>
+                        <button string="WhatsApp"
+                                name="action_contact_whatsapp"
+                                type="object"
+                                class="btn-secondary"/>
+                        <button string="Email"
+                                name="action_contact_email"
+                                type="object"
+                                class="btn-secondary"/>
+                        <button string="Close" special="cancel" class="btn-link"/>
+                    </footer>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Dashboard entry action: open dashboard directly -->
+    <record id="action_shopify_dashboard_entry" model="ir.actions.server">
+        <field name="name">Shopify Dashboard</field>
+        <field name="model_id" ref="base.model_ir_actions_server"/>
+        <field name="state">code</field>
+        <field name="code">action = env["shopify.trial.notice.service"].action_open_dashboard_with_trial_notice()</field>
+    </record>
+
+</odoo>
+

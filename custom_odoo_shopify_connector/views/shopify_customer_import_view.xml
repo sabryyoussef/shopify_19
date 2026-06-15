@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_shopify_customer_import_queue_list" model="ir.ui.view">
+        <field name="name">shopify.customer.import.queue.list</field>
+        <field name="model">shopify.customer.import.queue</field>
+        <field name="arch" type="xml">
+            <list string="Shopify Customer Import Queues">
+                <field name="name"/>
+                <field name="store_id"/>
+                <field name="operation_type"/>
+                <field name="status"/>
+                <field name="error_summary"/>
+                <field name="records_to_process"/>
+                <field name="processed_records"/>
+                <field name="create_date"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_shopify_customer_import_queue_search" model="ir.ui.view">
+        <field name="name">shopify.customer.import.queue.search</field>
+        <field name="model">shopify.customer.import.queue</field>
+        <field name="arch" type="xml">
+            <search string="Search Customer Import Queue">
+                <field name="name"/>
+                <field name="store_id"/>
+                <field name="status"/>
+                <filter name="pending" string="Pending" domain="[('status', '=', 'pending')]"/>
+                <filter name="processing" string="Processing" domain="[('status', '=', 'processing')]"/>
+                <filter name="failed" string="Failed" domain="[('status', '=', 'failed')]"/>
+                <filter name="done" string="Done" domain="[('status', '=', 'done')]"/>
+                <filter name="last_24h" string="Last 24h" domain="[('create_date', '>=', (context_today() - relativedelta(days=1)).strftime('%%Y-%%m-%%d 00:00:00'))]"/>
+                <separator/>
+                <filter name="by_store" string="By Store" context="{'group_by': 'store_id'}"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_shopify_customer_import_queue_form" model="ir.ui.view">
+        <field name="name">shopify.customer.import.queue.form</field>
+        <field name="model">shopify.customer.import.queue</field>
+        <field name="arch" type="xml">
+            <form string="Shopify Customer Import Queue">
+                <header>
+                    <button name="action_process_manually"
+                            string="Process Queue Manually"
+                            type="object"
+                            class="btn-primary"
+                            invisible="status not in ('pending','failed')"/>
+                    <button name="action_retry_failed" type="object" string="Retry Failed" class="btn-primary" invisible="status != 'failed'"/>
+                    <button name="action_reset_to_pending" type="object" string="Reset to Pending" class="btn-secondary" invisible="status == 'pending'"/>
+                    <button name="action_open_logs" type="object" string="Open Sync Logs" class="btn-secondary"/>
+                    <button name="action_open_related_records" type="object" string="Open Related Records" class="btn-secondary"/>
+                    <field name="status" widget="statusbar" statusbar_visible="pending,processing,done,failed"/>
+                    <field name="retry_count" string="Retries" readonly="1"/>
+                    <field name="last_error" string="Last Error" readonly="1"/>
+                    <field name="write_date" string="Last Run" readonly="1"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name" readonly="1"/>
+                            <field name="store_id" readonly="1"/>
+                            <field name="operation_type" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="next_retry_at" readonly="1"/>
+                            <field name="records_to_process" readonly="1"/>
+                            <field name="processed_records" readonly="1"/>
+                            <field name="error_message" readonly="1"/>
+                            <field name="create_date" readonly="1"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_shopify_customer_import_queue" model="ir.actions.act_window">
+        <field name="name">Customer Import Queues</field>
+        <field name="res_model">shopify.customer.import.queue</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_shopify_customer_import_queue_search"/>
+        <field name="context">{'search_default_pending': 1}</field>
+    </record>
+
+    <!-- Legacy Customer Import Queues menu removed; queues are now reachable
+         from the enterprise Synchronization / Queues menus in
+         views/shopify_menu.xml. -->
+
+</odoo>
+

@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- List: batch queue records -->
+    <record id="view_shopify_product_queue_list" model="ir.ui.view">
+        <field name="name">shopify.product.queue.list</field>
+        <field name="model">shopify.product.queue</field>
+        <field name="arch" type="xml">
+            <list string="Shopify Product Queue">
+                <field name="create_date"/>
+                <field name="name"/>
+                <field name="store_id"/>
+                <field name="total_records"/>
+                <field name="done_records"/>
+                <field name="failed_records"/>
+                <field name="state"/>
+                <field name="error_summary"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_shopify_product_queue_search" model="ir.ui.view">
+        <field name="name">shopify.product.queue.search</field>
+        <field name="model">shopify.product.queue</field>
+        <field name="arch" type="xml">
+            <search string="Search Product Queue">
+                <field name="name"/>
+                <field name="store_id"/>
+                <field name="state"/>
+                <filter name="pending" string="Pending" domain="[('state', '=', 'pending')]"/>
+                <filter name="processing" string="Processing" domain="[('state', '=', 'processing')]"/>
+                <filter name="failed" string="Failed" domain="[('state', '=', 'failed')]"/>
+                <filter name="done" string="Done" domain="[('state', '=', 'done')]"/>
+                <filter name="last_24h" string="Last 24h" domain="[('create_date', '>=', (context_today() - relativedelta(days=1)).strftime('%%Y-%%m-%%d 00:00:00'))]"/>
+                <separator/>
+                <filter name="by_store" string="By Store" context="{'group_by': 'store_id'}"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- List for queue lines: Product Data Line (ID, Product, Last Updated On, Image Import State, State) -->
+    <record id="view_shopify_product_queue_line_list" model="ir.ui.view">
+        <field name="name">shopify.product.queue.line.list</field>
+        <field name="model">shopify.product.queue.line</field>
+        <field name="arch" type="xml">
+            <list string="Product Data Line" create="0" delete="0" decoration-success="state == 'done'" decoration-danger="state == 'failed'">
+                <field name="shopify_product_id"/>
+                <field name="title"/>
+                <field name="write_date" string="Last Updated On"/>
+                <field name="image_import_state" widget="badge" decoration-info="image_import_state == 'pending'"/>
+                <field name="state"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- List for Log Lines tab: same lines with Message column -->
+    <record id="view_shopify_product_queue_line_log_list" model="ir.ui.view">
+        <field name="name">shopify.product.queue.line.log.list</field>
+        <field name="model">shopify.product.queue.line</field>
+        <field name="arch" type="xml">
+            <list string="Log Lines" create="0" delete="0" decoration-success="state == 'done'" decoration-danger="state == 'failed'">
+                <field name="shopify_product_id"/>
+                <field name="title"/>
+                <field name="state"/>
+                <field name="message"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Form: queue dashboard like screenshot 2 (Store, Created On, Log Book, Product Data Line / Log Lines) -->
+    <record id="view_shopify_product_queue_form" model="ir.ui.view">
+        <field name="name">shopify.product.queue.form</field>
+        <field name="model">shopify.product.queue</field>
+        <field name="arch" type="xml">
+            <form string="Shopify Product Queue">
+                <header>
+                    <button name="action_fetch_products"
+                            type="object"
+                            string="Fetch Products"
+                            class="btn-primary"
+                            title="Fetch products from Shopify and add them to this queue"/>
+                    <button name="action_process_manually"
+                            type="object"
+                            string="Process Queue Manually"
+                            class="btn-secondary"/>
+                    <button name="action_retry_failed"
+                            type="object"
+                            string="Retry Failed"
+                            class="btn-secondary"
+                            invisible="failed_records == 0"/>
+                    <button name="action_reset_to_pending"
+                            type="object"
+                            string="Reset to Pending"
+                            class="btn-secondary"
+                            invisible="total_records == 0"/>
+                    <button name="action_open_logs"
+                            type="object"
+                            string="Open Sync Logs"
+                            class="btn-secondary"/>
+                    <button name="action_open_related_records"
+                            type="object"
+                            string="Open Related Records"
+                            class="btn-secondary"/>
+                    <button name="action_set_to_completed"
+                            type="object"
+                            string="Set to Completed"
+                            invisible="state == 'done'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="pending,processing,done,failed"/>
+                    <field name="failed_records" string="Retries" readonly="1"/>
+                    <field name="error_summary" string="Last Error" readonly="1"/>
+                    <field name="write_date" string="Last Run" readonly="1"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" readonly="1" class="oe_inline"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Summary">
+                            <field name="store_id" readonly="1"/>
+                            <field name="create_date" string="Created On" readonly="1"/>
+                            <field name="import_based_on" readonly="1"/>
+                            <field name="from_date" readonly="1"/>
+                            <field name="to_date" readonly="1"/>
+                        </group>
+                        <group string="Log Book">
+                            <field name="do_not_update_existing"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group>
+                            <field name="total_records" string="Records" readonly="1" class="oe_inline"/>
+                            <field name="draft_records" string="Pending" readonly="1" class="oe_inline"/>
+                        </group>
+                        <group>
+                            <field name="failed_records" string="Failed" readonly="1" class="oe_inline"/>
+                            <field name="done_records" string="Done" readonly="1" class="oe_inline"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Product Data Line" name="product_data">
+                            <field name="line_ids"/>
+                        </page>
+                        <page string="Log Lines" name="log_lines">
+                            <field name="line_ids"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_shopify_product_queue" model="ir.actions.act_window">
+        <field name="name">Product Queue</field>
+        <field name="res_model">shopify.product.queue</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_shopify_product_queue_search"/>
+        <field name="context">{'search_default_pending': 1}</field>
+    </record>
+
+</odoo>

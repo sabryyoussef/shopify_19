@@ -1,0 +1,109 @@
+from odoo import api, fields, models, _
+
+
+class SaleOrder(models.Model):
+    _inherit = "sale.order"
+
+    shopify_order_id = fields.Char(
+        string="Shopify Order ID",
+        index=True,
+        help="ID of the corresponding order in Shopify used for idempotent imports.",
+    )
+    shopify_instance_id = fields.Many2one(
+        "shopify.store",
+        string="Shopify Store",
+        index=True,
+        help="Shopify store this order was imported from.",
+    )
+    shopify_fulfillment_status = fields.Selection(
+        [
+            ("pending", "Pending"),
+            ("fulfilled", "Fulfilled"),
+            ("failed", "Failed"),
+        ],
+        string="Shopify Fulfillment Status",
+        default="pending",
+        index=True,
+        help="Tracks whether the shipping/fulfillment update was pushed to Shopify.",
+    )
+    shopify_fulfilled = fields.Boolean(
+        string="Shopify Fulfilled",
+        compute="_compute_shopify_fulfilled",
+        store=True,
+        index=True,
+        help="True when this order's fulfillment/tracking has been successfully pushed to Shopify.",
+    )
+
+    def _compute_shopify_fulfilled(self):
+        for order in self:
+            order.shopify_fulfilled = order.shopify_fulfillment_status == "fulfilled"
+
+    shopify_cancelled = fields.Boolean(
+        string="Shopify Cancelled",
+        default=False,
+        index=True,
+        help="True when this order was cancelled in Shopify.",
+    )
+    shopify_cancel_reason = fields.Char(
+        string="Shopify Cancel Reason",
+        help="Cancellation reason received from Shopify or sent from Odoo.",
+    )
+
+    shopify_refunded = fields.Boolean(
+        string="Shopify Refunded",
+        default=False,
+        index=True,
+        help="True when this order's refund has been synced between Odoo and Shopify.",
+    )
+    shopify_refund_date = fields.Datetime(
+        string="Shopify Refund Date",
+        help="Timestamp when the refund was synced/processed.",
+        index=True,
+    )
+
+    def action_open_shopify_cancel_wizard(self):
+        self.ensure_one()
+        if not self.shopify_order_id or not self.shopify_instance_id:
+            return False
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Cancel in Shopify"),
+            "res_model": "shopify.cancel.order.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "context": {
+                "default_sale_order_id": self.id,
+                "default_store_id": self.shopify_instance_id.id,
+            },
+        }
+
+    _sql_constraints = [
+        (
+            "shopify_order_unique",
+            "unique(shopify_order_id)",
+            "Shopify order already imported.",
+        )
+    ]
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        records = super().create(vals_list)
+        Store = self.env["shopify.store"].sudo()
+        for rec, vals in zip(records, vals_list):
+            if not vals.get("shopify_order_id"):
+                continue
+            shopify_user_id = False
+            sid = vals.get("shopify_instance_id")
+            if sid:
+                store = Store.browse(sid)
+                if store.exists():
+                    user = store._resolve_import_order_salesperson_user()
+                    shopify_user_id = user.id if user else False
+            if not shopify_user_id:
+                from ..services.order_service import OrderService
+
+                shopify_user_id = OrderService(self.env)._resolve_shopify_user_id(store=None)
+            if shopify_user_id:
+                rec.user_id = shopify_user_id
+        return records
+

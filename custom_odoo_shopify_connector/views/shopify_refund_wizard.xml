@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_shopify_refund_wizard_form" model="ir.ui.view">
+        <field name="name">shopify.refund.wizard.form</field>
+        <field name="model">shopify.refund.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Refund Order on Shopify">
+                <sheet>
+                    <separator string="Step 1: Review Impact"/>
+                    <div class="alert alert-warning" role="alert">
+                        <strong>Warning:</strong>
+                        This will create a refund in Shopify and should only be done for posted and paid refunds.
+                    </div>
+
+                    <separator string="Step 2: Refund Context"/>
+                    <group class="mt-2 mb-2">
+                        <field name="move_id" readonly="1"/>
+                        <field name="sale_order_id" readonly="1"/>
+                        <field name="store_id" readonly="1"/>
+                    </group>
+
+                    <separator string="Step 3: Refund Options"/>
+                    <group class="mt-2 mb-2">
+                        <field name="notify"
+                               string="Notify Customer"
+                               help="Enable to send Shopify refund notification to the customer."/>
+                    </group>
+                    <group>
+                        <field name="refund_note"
+                               placeholder="Refund note to send to Shopify"
+                               help="Optional note included in the Shopify refund record."/>
+                    </group>
+                    <group string="Impact Summary">
+                        <div class="o_form_label">- Shopify refund records are created for this order.</div>
+                        <div class="o_form_label">- Financial totals and customer timeline are updated in Shopify.</div>
+                        <div class="o_form_label">- Customer notification is sent only if enabled below.</div>
+                    </group>
+                    <footer>
+                        <button string="Create Refund in Shopify"
+                                name="action_refund_in_shopify"
+                                type="object"
+                                class="btn-danger"/>
+                        <button string="Close" special="cancel" class="btn-secondary"/>
+                    </footer>
+                </sheet>
+            </form>
+        </field>
+    </record>
+</odoo>
+

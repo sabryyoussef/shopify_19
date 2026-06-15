@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="seq_shopify_product_queue" model="ir.sequence">
+        <field name="name">Shopify Product Queue</field>
+        <field name="code">shopify.product.queue</field>
+        <field name="prefix">PDQ</field>
+        <field name="padding">6</field>
+    </record>
+</odoo>

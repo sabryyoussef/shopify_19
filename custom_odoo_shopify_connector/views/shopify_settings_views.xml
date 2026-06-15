@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Shopify Settings view on res.config.settings -->
+    <record id="view_shopify_res_config_settings" model="ir.ui.view">
+        <field name="name">shopify.res.config.settings.view.form</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <!-- Inject Shopify settings block into the main settings form (Odoo 19) -->
+            <xpath expr="//form" position="inside">
+                <div class="app_settings_block" data-string="Shopify" string="Shopify" groups="base.group_system">
+                    <h2>Shopify Settings</h2>
+
+                    <!-- Store selector (full-width) -->
+                    <div class="o_setting_container mt16">
+                        <div class="o_setting_box">
+                            <div class="o_setting_left_pane">
+                                <span class="fa fa-store fa-2x"/>
+                            </div>
+                            <div class="o_setting_right_pane">
+                                <span class="o_form_label">
+                                    Select Shopify Store
+                                </span>
+                                <div class="content">
+                                    <field name="shopify_instance_id"
+                                           class="w-100"
+                                           placeholder="Select a Shopify store you want to configure."/>
+                                </div>
+                                <div class="text-muted mt8">
+                                    Select which Shopify store you want to configure. All settings below apply to the selected store.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Configuration cards in 2-column responsive grid -->
+                    <div class="o_setting_container mt16">
+                        <div class="row">
+                            <!-- CARD 1: Order Import Configuration -->
+                            <div class="col-12 col-lg-6 mb-3">
+                                <div class="o_setting_box">
+                                    <div class="o_setting_left_pane">
+                                        <span class="fa fa-shopping-cart fa-2x"/>
+                                    </div>
+                                    <div class="o_setting_right_pane">
+                                        <span class="o_form_label">
+                                            Order Import Configuration
+                                        </span>
+                                        <div class="text-muted mb8">
+                                            Configure how Shopify orders are imported into Odoo, including numbering, customers and gift cards.
+                                        </div>
+                                        <div class="content">
+                                            <group>
+                                                <field name="shopify_import_order_status"/>
+                                                <field name="shopify_use_odoo_sequence"/>
+                                                <field name="shopify_order_prefix"
+                                                       invisible="shopify_use_odoo_sequence"/>
+                                                <field name="shopify_default_pos_customer_id"/>
+                                                <field name="shopify_auto_fulfill_gift_card"/>
+                                            </group>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- CARD 2: Tax Configuration -->
+                            <div class="col-12 col-lg-6 mb-3">
+                                <div class="o_setting_box">
+                                    <div class="o_setting_left_pane">
+                                        <span class="fa fa-percent fa-2x"/>
+                                    </div>
+                                    <div class="o_setting_right_pane">
+                                        <span class="o_form_label">
+                                            Tax Configuration
+                                        </span>
+                                        <div class="text-muted mb8">
+                                            Choose how Shopify taxes are mapped to Odoo taxes during order import.
+                                        </div>
+                                        <div class="content">
+                                            <group>
+                                                <field name="shopify_tax_behavior"/>
+                                            </group>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- CARD 3: Stock Information -->
+                            <div class="col-12 col-lg-6 mb-3">
+                                <div class="o_setting_box">
+                                    <div class="o_setting_left_pane">
+                                        <span class="fa fa-cubes fa-2x"/>
+                                    </div>
+                                    <div class="o_setting_right_pane">
+                                        <span class="o_form_label">
+                                            Stock Information
+                                        </span>
+                                        <div class="text-muted mb8">
+                                            Configure how Odoo stock is exported to Shopify and enable the automatic stock export scheduler.
+                                        </div>
+                                        <div class="content">
+                                            <group>
+                                                <field name="shopify_stock_type"/>
+                                                <field name="export_stock_enabled"/>
+                                                <field name="export_stock_interval_number"
+       invisible="not export_stock_enabled"/>
+
+<field name="export_stock_interval_type"
+       invisible="not export_stock_enabled"/>
+                                                </group>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- CARD 4: Webhook Configuration -->
+                            <div class="col-12 col-lg-6 mb-3">
+                                <div class="o_setting_box">
+                                    <div class="o_setting_left_pane">
+                                        <span class="fa fa-link fa-2x"/>
+                                    </div>
+                                    <div class="o_setting_right_pane">
+                                        <span class="o_form_label">
+                                            Webhook Configuration
+                                        </span>
+                                        <div class="text-muted mb8">
+                                            Enable real-time order import using Shopify webhooks.
+                                        </div>
+                                        <div class="content">
+                                            <group>
+                                                <field name="shopify_manage_orders_webhook"/>
+                                            </group>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="action_shopify_settings" model="ir.actions.act_window">
+        <field name="name">Settings</field>
+        <field name="res_model">res.config.settings</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_shopify_res_config_settings"/>
+        <field name="context">{'default_shopify_instance_id': False}</field>
+    </record>
+
+    <!-- Legacy Settings menu removed; settings now accessed via the
+         consolidated Configuration menus in views/shopify_menu.xml. -->
+
+</odoo>
+

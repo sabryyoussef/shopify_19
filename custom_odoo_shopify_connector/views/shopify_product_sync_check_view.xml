@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_shopify_product_sync_check_line_list" model="ir.ui.view">
+        <field name="name">shopify.product.sync.check.line.list</field>
+        <field name="model">shopify.product.sync.check.line</field>
+        <field name="arch" type="xml">
+            <list decoration-success="status == 'synced'"
+                  decoration-warning="status == 'only_in_odoo'"
+                  decoration-danger="status == 'only_in_shopify'">
+                <field name="shopify_product_id"/>
+                <field name="shopify_title"/>
+                <field name="shopify_sku"/>
+                <field name="shopify_price"/>
+                <field name="in_odoo"/>
+                <field name="in_shopify"/>
+                <field name="status"/>
+                <field name="odoo_product_id"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_shopify_product_sync_check_form" model="ir.ui.view">
+        <field name="name">shopify.product.sync.check.form</field>
+        <field name="model">shopify.product.sync.check</field>
+        <field name="arch" type="xml">
+            <form string="Product Sync Check">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="store_id"/>
+                        </group>
+                        <group>
+                            <field name="count_synced" readonly="1"/>
+                            <field name="count_only_odoo" readonly="1"/>
+                            <field name="count_only_shopify" readonly="1"/>
+                        </group>
+                    </group>
+                    <group>
+                        <button name="action_load_comparison"
+                                type="object"
+                                string="Load Comparison (Odoo vs Shopify)"
+                                class="btn-primary"/>
+                    </group>
+                    <notebook>
+                        <page string="Comparison">
+                            <field name="line_ids" readonly="1"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_shopify_product_sync_check" model="ir.actions.act_window">
+        <field name="name">Product Sync Check</field>
+        <field name="res_model">shopify.product.sync.check</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="context">{'default_store_id': active_id}</field>
+    </record>
+
+</odoo>

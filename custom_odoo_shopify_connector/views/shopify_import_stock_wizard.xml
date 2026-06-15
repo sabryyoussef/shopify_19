@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="action_shopify_import_stock_wizard" model="ir.actions.act_window">
+        <field name="name">Import Stock</field>
+        <field name="res_model">shopify.import.stock.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <record id="view_shopify_import_stock_wizard_form" model="ir.ui.view">
+        <field name="name">shopify.import.stock.wizard.form</field>
+        <field name="model">shopify.import.stock.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Import Stock from Shopify">
+                <sheet>
+                    <separator string="Step 1: Select Store and Behavior"/>
+                    <group class="mt-2 mb-2">
+                        <field name="store_id"
+                               string="Shopify Store"
+                               required="1"
+                               options="{'no_create': True}"
+                               help="Store from which inventory quantities will be imported."/>
+                        <field name="auto_apply_inventory_adjustment"
+                               string="Auto Apply Inventory Adjustment"
+                               help="If enabled, imported quantities are applied automatically after queue processing."/>
+                    </group>
+
+                    <separator string="Step 2: Review Import Notes"/>
+                    <p class="text-muted">
+                        This will fetch inventory levels from Shopify for the selected store and
+                        synchronize Odoo stock quantities. Products with lot/serial tracking will be skipped.
+                    </p>
+                    <p class="text-muted">
+                        This operation creates and processes a stock import queue for the selected store.
+                    </p>
+                </sheet>
+                <footer>
+                    <button name="action_import_stock"
+                            string="Start Stock Import"
+                            type="object"
+                            class="btn-primary"/>
+                    <button string="Cancel"
+                            special="cancel"
+                            class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+</odoo>
+

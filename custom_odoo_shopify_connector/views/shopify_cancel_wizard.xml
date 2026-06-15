@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_shopify_cancel_order_wizard_form" model="ir.ui.view">
+        <field name="name">shopify.cancel.order.wizard.form</field>
+        <field name="model">shopify.cancel.order.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Cancel Order on Shopify">
+                <sheet>
+                    <separator string="Step 1: Review Impact"/>
+                    <div class="alert alert-warning" role="alert">
+                        <strong>Warning:</strong>
+                        This will cancel the Shopify order and can affect fulfillment and customer communication.
+                    </div>
+
+                    <separator string="Step 2: Order Context"/>
+                    <group class="mt-2 mb-2">
+                        <field name="sale_order_id" readonly="1"/>
+                        <field name="store_id" readonly="1"/>
+                    </group>
+
+                    <separator string="Step 3: Cancellation Details"/>
+                    <group class="mt-2 mb-2">
+                        <field name="cancel_reason"
+                               required="1"
+                               help="Select why this order is being cancelled in Shopify."/>
+                        <field name="email_customer"
+                               string="Notify Customer by Email"
+                               help="Enable to send Shopify cancellation email to the customer."/>
+                    </group>
+                    <group>
+                        <field name="cancel_message"
+                               placeholder="Optional message for internal reference"
+                               help="Optional note saved with the cancellation context."/>
+                    </group>
+
+                    <group string="Impact Summary">
+                        <div class="o_form_label">- The Shopify order status changes to cancelled.</div>
+                        <div class="o_form_label">- Fulfillment/export workflows for this order may stop.</div>
+                        <div class="o_form_label">- Customer notification is sent only if enabled below.</div>
+                    </group>
+                    <footer>
+                        <button string="Cancel Order in Shopify"
+                                name="action_cancel_in_shopify"
+                                type="object"
+                                class="btn-danger"/>
+                        <button string="Close" special="cancel" class="btn-secondary"/>
+                    </footer>
+                </sheet>
+            </form>
+        </field>
+    </record>
+</odoo>
+

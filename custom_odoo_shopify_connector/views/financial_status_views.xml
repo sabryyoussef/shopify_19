@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_shopify_financial_status_tree" model="ir.ui.view">
+        <field name="name">shopify.financial.status.tree</field>
+        <field name="model">shopify.financial.status</field>
+        <field name="arch" type="xml">
+            <list string="Shopify Financial Status Rules">
+                <field name="instance_id"/>
+                <field name="payment_gateway_id"/>
+                <field name="shopify_financial_status"/>
+                <field name="workflow_id"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_shopify_financial_status_form" model="ir.ui.view">
+        <field name="name">shopify.financial.status.form</field>
+        <field name="model">shopify.financial.status</field>
+        <field name="arch" type="xml">
+            <form string="Shopify Financial Status Rule">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="instance_id"/>
+                            <field name="payment_gateway_id"/>
+                        </group>
+                        <group>
+                            <field name="shopify_financial_status"/>
+                            <field name="workflow_id"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_shopify_financial_status_search" model="ir.ui.view">
+        <field name="name">shopify.financial.status.search</field>
+        <field name="model">shopify.financial.status</field>
+        <field name="arch" type="xml">
+            <search string="Shopify Financial Status Rules">
+                <field name="instance_id"/>
+                <field name="payment_gateway_id"/>
+                <field name="shopify_financial_status"/>
+                <field name="workflow_id"/>
+                <filter string="Active" name="active" domain="[('active', '=', True)]"/>
+                <filter string="Archived" name="inactive" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_shopify_financial_status" model="ir.actions.act_window">
+        <field name="name">Financial Status Rules</field>
+        <field name="res_model">shopify.financial.status</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_shopify_financial_status_search"/>
+    </record>
+
+    <!-- Legacy Financial Status menu removed; status rules are now accessible
+         under Configuration in views/shopify_menu.xml. -->
+
+</odoo>
+

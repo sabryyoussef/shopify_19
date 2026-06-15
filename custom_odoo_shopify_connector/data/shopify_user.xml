@@ -1,0 +1,32 @@
+<odoo>
+    <data noupdate="1">
+
+        <!-- Partner linked to Shopify technical user: not a commercial customer (Sales → Customers). -->
+        <record id="partner_shopify_system" model="res.partner">
+            <field name="name">Shopify</field>
+            <field name="email">shopify@system.local</field>
+            <field name="type">contact</field>
+            <field name="customer_rank" eval="0"/>
+            <field name="supplier_rank" eval="0"/>
+            <field name="active">True</field>
+        </record>
+
+        <!-- Internal user used as salesperson on imported Shopify orders -->
+        <record id="user_shopify" model="res.users">
+            <field name="name">Shopify</field>
+            <field name="login">shopify@system.local</field>
+            <field name="email">shopify@system.local</field>
+            <field name="partner_id" ref="partner_shopify_system"/>
+            <field name="active">True</field>
+
+            <field name="company_id" ref="base.main_company"/>
+            <field name="company_ids" eval="[(6, 0, [ref('base.main_company')])]"/>
+
+            <field name="group_ids" eval="[(6, 0, [
+                ref('base.group_user')
+            ])]"/>
+
+        </record>
+
+    </data>
+</odoo>
