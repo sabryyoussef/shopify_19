@@ -1,3 +1,5 @@
+import json
+
 from odoo import api, models, _
 from ..services.order_import_service import OrderImportService
 
@@ -57,7 +59,7 @@ class ShopifyOrderSync(models.AbstractModel):
                     {
                         "store_id": store.id,
                         "shopify_order_id": str(shopify_order_id or ""),
-                        "payload": self.env["ir.qweb"]._json_dumps(order),
+                        "payload": json.dumps(order),
                         "state": "pending",
                         "job_type": "order",
                     }
