@@ -208,7 +208,7 @@ class ShopifyStore(models.Model):
             ("minutes", "Minutes"),
             ("hours", "Hours"),
         ],
-        string="Interval Unit",
+        string="Shipping Interval Unit",
         default="minutes",
     )
     last_shipping_sync_time = fields.Datetime(
@@ -230,7 +230,7 @@ class ShopifyStore(models.Model):
     )
     import_shipped_orders_interval_type = fields.Selection(
         [("minutes", "Minutes"), ("hours", "Hours")],
-        string="Interval Unit",
+        string="Shipped Orders Interval Unit",
         default="minutes",
     )
     last_shipped_orders_import_time = fields.Datetime(

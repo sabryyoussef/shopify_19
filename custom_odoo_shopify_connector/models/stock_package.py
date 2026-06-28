@@ -8,11 +8,11 @@ class StockPackage(models.Model):
 
     carrier_id = fields.Many2one(
         "delivery.carrier",
-        string="Carrier",
+        string="Package Carrier",
         help="Carrier used for this package (for Shopify fulfillment sync).",
     )
     carrier_tracking_ref = fields.Char(
-        string="Tracking Reference",
+        string="Package Tracking Reference",
         copy=False,
         help="Tracking number for this package (sent to Shopify when multiple packages).",
     )
