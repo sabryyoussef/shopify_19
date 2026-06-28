@@ -577,7 +577,9 @@ class ShopifyStore(models.Model):
         import_service = OrderImportService(self.env)
 
         for store in stores:
-            api_client = store._get_api_client()
+            api_client = store._get_api_client_for_scheduler(log_type="order")
+            if not api_client:
+                continue
             params = {}
             if store.last_order_import_time:
                 params["created_at_min"] = _shopify_datetime(store.last_order_import_time)
@@ -809,6 +811,33 @@ class ShopifyStore(models.Model):
             shop_url=shop_url,
             access_token=access_token,
         )
+
+    def _get_api_client_for_scheduler(self, log_type="connection"):
+        """Return an API client for cron/scheduler jobs, or None if misconfigured.
+
+        User-initiated actions should keep using ``_get_api_client`` so operators
+        get an immediate error. Scheduled jobs skip bad stores instead of failing
+        the whole cron run.
+        """
+        self.ensure_one()
+        try:
+            return self._get_api_client()
+        except UserError as err:
+            message = str(err)
+            _logger.warning(
+                "Skipping scheduled Shopify job for store %s (#%s): %s",
+                self.name,
+                self.id,
+                message,
+            )
+            self.env["shopify.sync.log.mixin"].create_log(
+                store=self,
+                log_type=log_type,
+                message=message,
+                payload=False,
+                status="failed",
+            )
+            return None
 
     def action_test_connection(self):
         for store in self:
