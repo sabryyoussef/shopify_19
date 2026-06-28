@@ -117,6 +117,93 @@ class TestSyncReliability(TransactionCase):
         self.assertTrue(product_map)
         self.assertEqual(product_map.product_tmpl_id.id, template.id)
 
+    def test_product_import_prunes_cartesian_extra_variants(self):
+        payload = {
+            "id": 123456789,
+            "title": "Partial Matrix Product",
+            "variants": [
+                {
+                    "id": 90001,
+                    "sku": "RED-S",
+                    "price": "10.00",
+                    "option1": "Red",
+                    "option2": "S",
+                },
+                {
+                    "id": 90002,
+                    "sku": "BLUE-M",
+                    "price": "12.00",
+                    "option1": "Blue",
+                    "option2": "M",
+                },
+            ],
+            "options": [
+                {"name": "Color", "position": 1, "values": ["Red", "Blue"]},
+                {"name": "Size", "position": 2, "values": ["S", "M"]},
+            ],
+            "images": [],
+            "tags": "",
+            "product_type": "",
+        }
+
+        service = ProductService(self.env)
+        service.import_shopify_product(payload, self.store)
+
+        product_map = self.env["shopify.product.map"].search(
+            [
+                ("store_id", "=", self.store.id),
+                ("shopify_product_id", "=", "123456789"),
+            ],
+            limit=1,
+        )
+        self.assertTrue(product_map)
+        template = product_map.product_tmpl_id
+        self.assertEqual(len(template.product_variant_ids), 2)
+        self.assertEqual(
+            set(template.product_variant_ids.mapped("default_code")),
+            {"RED-S", "BLUE-M"},
+        )
+
+    def test_product_import_same_title_creates_separate_templates(self):
+        base_payload = {
+            "variants": [
+                {
+                    "id": 91001,
+                    "sku": "DUP-A-1",
+                    "price": "10.00",
+                    "option1": "Red",
+                },
+            ],
+            "options": [{"name": "Color", "position": 1, "values": ["Red"]}],
+            "images": [],
+            "tags": "",
+            "product_type": "",
+        }
+        service = ProductService(self.env)
+        payload_a = dict(base_payload, id=111111111, title="Shared Title Product")
+        payload_b = dict(base_payload, id=222222222, title="Shared Title Product")
+        payload_b["variants"] = [
+            {
+                "id": 91002,
+                "sku": "DUP-B-1",
+                "price": "11.00",
+                "option1": "Blue",
+            }
+        ]
+        payload_b["options"] = [{"name": "Color", "position": 1, "values": ["Blue"]}]
+
+        service.import_shopify_product(payload_a, self.store)
+        service.import_shopify_product(payload_b, self.store)
+
+        maps = self.env["shopify.product.map"].search(
+            [
+                ("store_id", "=", self.store.id),
+                ("shopify_product_id", "in", ["111111111", "222222222"]),
+            ]
+        )
+        self.assertEqual(len(maps), 2)
+        self.assertNotEqual(maps[0].product_tmpl_id.id, maps[1].product_tmpl_id.id)
+
     def test_customer_import_maps_country_by_name_company_and_phone(self):
         service = self.env["shopify.service"].sudo()
         payload = {
