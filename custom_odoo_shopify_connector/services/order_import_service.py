@@ -303,6 +303,12 @@ class OrderImportService:
             fulfillment_service = fulfillment_service or ShopifyFulfillmentService(self.env)
 
             sale_order = order_service.create_order_from_payload(order_data, store)
+
+            from .payment_fee_service import PaymentFeeService
+
+            fee_service = PaymentFeeService(self.env, import_service=self)
+            fee_service.apply_fees_for_order(sale_order, store, order_data)
+
             self.apply_workflow(sale_order, store, payload=order_data, workflow=workflow)
             fulfillment_service.handle_fulfillment(
                 sale_order, store, payload=order_data or {}
@@ -813,13 +819,24 @@ class OrderImportService:
                             [
                                 ("instance_id", "=", store.id),
                                 ("active", "=", True),
-                                ("payment_code", "=", gateway_name),
+                                ("payment_code", "ilike", gateway_name.strip()),
                             ],
                             limit=1,
                         )
                     )
                     if gateway and gateway.odoo_journal_id:
                         payment_journal = gateway.odoo_journal_id
+                    elif gateway_name:
+                        self._log(
+                            store,
+                            _(
+                                "Payment journal fallback for gateway '%s' on order %s; "
+                                "configure odoo_journal_id on the payment gateway."
+                            )
+                            % (gateway_name, order.name),
+                            {"order_id": order.id, "gateway": gateway_name},
+                            "success",
+                        )
 
             if not payment_journal or not payment_method:
                 self._log(
@@ -836,6 +853,8 @@ class OrderImportService:
 
             try:
                 amount = sum(invoices.mapped("amount_residual"))
+                if order.shopify_fee_discount_pending:
+                    amount = max(0.0, amount - order.shopify_fee_discount_pending)
                 if not amount:
                     return
 

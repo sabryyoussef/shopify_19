@@ -565,13 +565,9 @@ class ShopifyService(models.AbstractModel):
         if invoices:
             invoices.action_post()
 
-        financial_status = (payload.get("financial_status") or "").lower()
-        if financial_status in ("refunded", "partially_refunded"):
-            # Create refund (credit note) for posted invoices
-            for inv in invoices:
-                refund = inv._reverse_moves(default_values_list=[{"ref": _("Refund for Shopify order %s") % shopify_order_id}])
-                if refund:
-                    refund.action_post()
+        from ..services.refund_sync_service import RefundSyncService
+
+        RefundSyncService(self.env).sync_refund_from_order_payload(store, sale_order, payload)
 
         # Inventory adjustment via stock moves (Stock -> Inventory Loss)
         self._create_inventory_adjustment_moves(store, sale_order, payload)

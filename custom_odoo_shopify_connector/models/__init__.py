@@ -8,6 +8,7 @@ from . import shopify_queue_mixin
 from . import order_queue
 from . import sync_log
 from . import sale_order
+from . import sale_order_line
 from . import shopify_product_map
 from . import shopify_variant_map
 from . import shopify_product_queue
@@ -29,6 +30,7 @@ from . import stock_package
 from . import shopify_queue
 from . import shopify_service
 from . import shopify_cancel_wizard
+from . import shopify_exchange_wizard
 from . import account_move
 from . import shopify_refund_wizard
 from . import product_product

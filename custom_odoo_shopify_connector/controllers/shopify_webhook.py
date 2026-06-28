@@ -234,21 +234,9 @@ class ShopifyRefundWebhookController(http.Controller):
             return request.make_response(json.dumps({"success": True}), status=200)
 
         try:
-            # Create reversal credit note
-            credit = invoice._reverse_moves(
-                default_values_list=[{"ref": _("Shopify refund %s") % (refund_id or shopify_order_id)}]
-            )
-            if credit:
-                credit.action_post()
-                # Mark as synced and store Shopify refund id
-                credit.write(
-                    {
-                        "shopify_refunded": True,
-                        "shopify_refund_date": fields.Datetime.now(),
-                        "shopify_refund_id": refund_id or False,
-                    }
-                )
-                order.write({"shopify_refunded": True, "shopify_refund_date": fields.Datetime.now()})
+            from ..services.refund_sync_service import RefundSyncService
+
+            RefundSyncService(request.env).sync_refund_from_webhook(store, order, payload)
         except Exception as exc:
             handler.mark_webhook_event_status(event, "failed", str(exc))
             raise

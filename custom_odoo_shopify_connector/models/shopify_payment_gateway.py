@@ -23,6 +23,39 @@ class ShopifyPaymentGateway(models.Model):
         help="Journal used when registering Shopify payments.",
     )
 
+    fee_percent = fields.Float(
+        string="Fee Percent",
+        default=0.0,
+        help="Percentage fee charged by this gateway (e.g. 5 for Paymob).",
+    )
+    fee_fixed = fields.Float(
+        string="Fixed Fee",
+        default=0.0,
+        help="Fixed fee amount per transaction.",
+    )
+    fee_product_id = fields.Many2one(
+        "product.product",
+        string="Fee Product",
+        help="Product used when adding payment fees as a sale order line.",
+    )
+    fee_apply_mode = fields.Selection(
+        [
+            ("line_item", "Add Line Item"),
+            ("invoice_discount", "Global Discount at Invoice"),
+            ("none", "None"),
+        ],
+        string="Fee Apply Mode",
+        default="none",
+    )
+    fee_base = fields.Selection(
+        [
+            ("subtotal", "Order Subtotal"),
+            ("order_total", "Order Total"),
+        ],
+        string="Fee Base",
+        default="subtotal",
+    )
+
     payment_code = fields.Char(
         string="Payment Code",
         required=True,

@@ -50,6 +50,20 @@ class OrderService:
             "shopify_order_id": str(shopify_order_id) if shopify_order_id else False,
             "shopify_instance_id": store.id if store else False,
         }
+        gateway_names = payload.get("payment_gateway_names") or []
+        if isinstance(gateway_names, str):
+            gateway_names = [gateway_names]
+        if gateway_names:
+            order_vals["shopify_payment_gateway"] = gateway_names[0]
+        elif payload.get("gateway"):
+            order_vals["shopify_payment_gateway"] = payload.get("gateway")
+        if payload.get("total_price") is not None:
+            try:
+                order_vals["shopify_order_total"] = float(payload.get("total_price") or 0.0)
+            except (TypeError, ValueError):
+                pass
+        fulfillment_status = payload.get("fulfillment_status") or "unfulfilled"
+        order_vals["shopify_fulfillment_status"] = fulfillment_status
         shopify_user_id = self._resolve_shopify_user_id(store)
         if shopify_user_id:
             order_vals["user_id"] = shopify_user_id
@@ -214,6 +228,17 @@ class OrderService:
 
         discount_pct = self._compute_discount_pct(item, quantity, price)
 
+        discount_amount = 0.0
+        discount_allocations = item.get("discount_allocations") or []
+        if discount_allocations:
+            for alloc in discount_allocations:
+                try:
+                    discount_amount += float(alloc.get("amount") or 0.0)
+                except Exception:
+                    continue
+        else:
+            discount_amount = float(item.get("total_discount") or 0.0)
+
         taxes = self.env["account.tax"]
         if self.import_service and store:
             taxes = self.import_service.get_taxes_for_line(store, item)
@@ -225,6 +250,9 @@ class OrderService:
             "product_uom_qty": quantity,
             "price_unit": float_round(price, 2),
             "discount": discount_pct,
+            "shopify_line_item_id": str(item.get("id") or "") or False,
+            "shopify_original_price": float_round(price, 2),
+            "shopify_line_discount_amount": float_round(discount_amount, 2),
         }
         sale_line_model = self.env["sale.order.line"]
         if "tax_ids" in sale_line_model._fields:

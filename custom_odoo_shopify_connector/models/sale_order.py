@@ -15,16 +15,10 @@ class SaleOrder(models.Model):
         index=True,
         help="Shopify store this order was imported from.",
     )
-    shopify_fulfillment_status = fields.Selection(
-        [
-            ("pending", "Pending"),
-            ("fulfilled", "Fulfilled"),
-            ("failed", "Failed"),
-        ],
+    shopify_fulfillment_status = fields.Char(
         string="Shopify Fulfillment Status",
-        default="pending",
         index=True,
-        help="Tracks whether the shipping/fulfillment update was pushed to Shopify.",
+        help="Raw fulfillment status from Shopify (e.g. fulfilled, partial, unfulfilled).",
     )
     shopify_fulfilled = fields.Boolean(
         string="Shopify Fulfilled",
@@ -60,6 +54,120 @@ class SaleOrder(models.Model):
         help="Timestamp when the refund was synced/processed.",
         index=True,
     )
+    shopify_refunded_amount = fields.Float(
+        string="Shopify Refunded Amount",
+        help="Cumulative refund amount synced from Shopify.",
+    )
+    shopify_payment_gateway = fields.Char(
+        string="Shopify Payment Gateway",
+        index=True,
+        help="Primary payment gateway name from the Shopify order payload.",
+    )
+    shopify_order_total = fields.Float(
+        string="Shopify Order Total",
+        help="Total price from Shopify (gross).",
+    )
+    shopify_net_received = fields.Float(
+        string="Shopify Net Received",
+        help="Net amount received after payment gateway fees.",
+    )
+    shopify_gateway_fee = fields.Float(
+        string="Shopify Gateway Fee",
+        help="Computed payment gateway fee for this order.",
+    )
+    shopify_fee_discount_pending = fields.Float(
+        string="Pending Fee Discount",
+        help="Fee amount to apply as global discount at invoicing (invoice_discount mode).",
+    )
+    shopify_exchange_parent_id = fields.Many2one(
+        "sale.order",
+        string="Exchange Parent Order",
+        ondelete="set null",
+        index=True,
+        help="Original order when this sale order is a replacement from an exchange.",
+    )
+    shopify_exchange_child_ids = fields.One2many(
+        "sale.order",
+        "shopify_exchange_parent_id",
+        string="Exchange Replacement Orders",
+    )
+    shopify_sync_log_count = fields.Integer(
+        compute="_compute_shopify_timeline_counts",
+    )
+    shopify_credit_note_count = fields.Integer(
+        compute="_compute_shopify_timeline_counts",
+    )
+
+    def _compute_shopify_timeline_counts(self):
+        Log = self.env["shopify.sync.log"].sudo()
+        Move = self.env["account.move"].sudo()
+        for order in self:
+            domain_logs = []
+            if order.shopify_order_id:
+                domain_logs = [("shopify_id", "=", order.shopify_order_id)]
+            elif order.shopify_instance_id:
+                domain_logs = [("store_id", "=", order.shopify_instance_id.id)]
+            order.shopify_sync_log_count = Log.search_count(domain_logs) if domain_logs else 0
+            order.shopify_credit_note_count = Move.search_count(
+                [
+                    ("move_type", "=", "out_refund"),
+                    ("invoice_origin", "=", order.name),
+                ]
+            )
+
+    def action_shopify_order_timeline(self):
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Shopify Order Timeline"),
+            "res_model": "sale.order",
+            "res_id": self.id,
+            "view_mode": "form",
+            "target": "current",
+            "context": {"shopify_timeline_mode": True},
+        }
+
+    def action_view_shopify_sync_logs(self):
+        self.ensure_one()
+        domain = [("store_id", "=", self.shopify_instance_id.id)] if self.shopify_instance_id else []
+        if self.shopify_order_id:
+            domain = [("shopify_id", "=", self.shopify_order_id)]
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Shopify Sync Logs"),
+            "res_model": "shopify.sync.log",
+            "view_mode": "list,form",
+            "domain": domain,
+        }
+
+    def action_view_shopify_credit_notes(self):
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Credit Notes"),
+            "res_model": "account.move",
+            "view_mode": "list,form",
+            "domain": [
+                ("move_type", "=", "out_refund"),
+                ("invoice_origin", "=", self.name),
+            ],
+        }
+
+    def action_open_shopify_exchange_wizard(self):
+        self.ensure_one()
+        if not self.shopify_order_id or not self.shopify_instance_id:
+            return False
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Shopify Exchange"),
+            "res_model": "shopify.exchange.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "context": {
+                "default_sale_order_id": self.id,
+                "default_store_id": self.shopify_instance_id.id,
+            },
+        }
 
     def action_open_shopify_cancel_wizard(self):
         self.ensure_one()
