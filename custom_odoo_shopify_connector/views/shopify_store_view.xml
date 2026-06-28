@@ -74,6 +74,10 @@
                                 <group string="Import">
                                     <field name="order_import_salesperson_id"/>
                                     <field name="import_order_status"/>
+                                    <field name="order_import_start_date"/>
+                                    <field name="delivery_product_id"/>
+                                    <field name="payment_fee_product_id"/>
+                                    <field name="refund_sync_mode"/>
                                     <field name="use_odoo_sequence"/>
                                     <field name="order_prefix" invisible="use_odoo_sequence"/>
                                     <field name="default_pos_customer_id"/>

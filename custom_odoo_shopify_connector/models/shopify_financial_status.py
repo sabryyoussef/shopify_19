@@ -28,6 +28,7 @@ class ShopifyFinancialStatus(models.Model):
             ("paid", "Paid"),
             ("partially_paid", "Partially Paid"),
             ("refunded", "Refunded"),
+            ("partially_refunded", "Partially Refunded"),
             ("voided", "Voided"),
         ],
         string="Shopify Financial Status",

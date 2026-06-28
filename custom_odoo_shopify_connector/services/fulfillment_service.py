@@ -144,10 +144,26 @@ class ShopifyFulfillmentService:
     # ---------------------------
     def _apply_refund_guard(self, order):
         """
-        Prevent fulfillment if order already refunded.
+        Block fulfillment only when every shippable line is fully refunded.
         """
-        if getattr(order, "shopify_refunded", False):
-            _logger.warning("Skipping fulfillment: order already refunded")
+        shippable_lines = order.order_line.filtered(
+            lambda l: not l.display_type and l.product_id.type != "service"
+        )
+        if not shippable_lines:
+            if getattr(order, "shopify_refunded", False):
+                _logger.warning("Skipping fulfillment: order marked fully refunded")
+                return True
+            return False
+
+        all_refunded = all(
+            (line.shopify_refunded_qty or 0.0) >= line.product_uom_qty
+            for line in shippable_lines
+        )
+        if all_refunded or (
+            getattr(order, "shopify_refunded", False)
+            and not any(line.shopify_refunded_qty for line in shippable_lines)
+        ):
+            _logger.warning("Skipping fulfillment: all lines refunded")
             return True
         return False
 

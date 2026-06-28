@@ -54,6 +54,24 @@ class ShopifyStore(models.Model):
         string="Delivery Product",
         help="Product used when creating shipping lines from Shopify orders.",
     )
+    payment_fee_product_id = fields.Many2one(
+        "product.product",
+        string="Default Payment Fee Product",
+        help="Fallback product for payment fee lines when the gateway has none configured.",
+    )
+    refund_sync_mode = fields.Selection(
+        [
+            ("line_level", "Line-Level Partial Refunds"),
+            ("full", "Full Invoice Reversal"),
+        ],
+        string="Refund Sync Mode",
+        default="line_level",
+        help="How Shopify refunds are converted to Odoo credit notes.",
+    )
+    order_import_start_date = fields.Datetime(
+        string="Order Import Start Date",
+        help="On first cron run, import orders created on or after this date instead of all history.",
+    )
 
     # Order import configuration
     import_order_status = fields.Selection(
@@ -583,6 +601,8 @@ class ShopifyStore(models.Model):
             params = {}
             if store.last_order_import_time:
                 params["created_at_min"] = _shopify_datetime(store.last_order_import_time)
+            elif store.order_import_start_date:
+                params["created_at_min"] = _shopify_datetime(store.order_import_start_date)
 
             try:
                 orders = api_client.get_orders(**params)

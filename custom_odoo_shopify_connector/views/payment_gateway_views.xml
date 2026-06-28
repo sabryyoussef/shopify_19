@@ -9,6 +9,9 @@
                 <field name="name"/>
                 <field name="instance_id"/>
                 <field name="payment_code"/>
+                <field name="odoo_journal_id"/>
+                <field name="fee_percent"/>
+                <field name="fee_apply_mode"/>
                 <field name="active"/>
             </list>
         </field>
@@ -28,6 +31,18 @@
                         <group>
                             <field name="payment_code"/>
                             <field name="active"/>
+                            <field name="odoo_journal_id"/>
+                        </group>
+                    </group>
+                    <group string="Payment Fees">
+                        <group>
+                            <field name="fee_apply_mode"/>
+                            <field name="fee_base"/>
+                            <field name="fee_percent"/>
+                            <field name="fee_fixed"/>
+                        </group>
+                        <group>
+                            <field name="fee_product_id"/>
                         </group>
                     </group>
                 </sheet>
