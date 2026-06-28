@@ -67,3 +67,21 @@ class TestCheckpointScheduler(TransactionCase):
 
         self.assertEqual(store.last_order_import_time, before)
 
+    def test_import_orders_scheduler_skips_store_without_access_token(self):
+        Store = self.env["shopify.store"].sudo()
+        OrderQueue = self.env["shopify.order.queue"].sudo()
+
+        store = Store.create(
+            {
+                "name": "Unconfigured Store",
+                "shop_url": "https://example.myshopify.com",
+                "access_token": False,
+                "active": True,
+                "webhook_secret": "secret",
+            }
+        )
+
+        Store.import_orders_scheduler()
+
+        self.assertEqual(OrderQueue.search_count([("store_id", "=", store.id)]), 0)
+
