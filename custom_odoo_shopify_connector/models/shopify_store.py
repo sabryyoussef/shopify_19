@@ -68,6 +68,65 @@ class ShopifyStore(models.Model):
         default="line_level",
         help="How Shopify refunds are converted to Odoo credit notes.",
     )
+    cancel_sync_mode = fields.Selection(
+        [
+            ("credit_note", "Create Credit Note Then Cancel"),
+            ("cancel_only", "Cancel Order Only"),
+        ],
+        string="Cancel Sync Mode",
+        default="credit_note",
+        help="When a Shopify order is cancelled after invoicing, create a credit note before cancelling.",
+    )
+    order_edit_sync_mode = fields.Selection(
+        [
+            ("ignore", "Ignore Shopify Edits"),
+            ("draft_sent", "Sync Draft and Sent Orders"),
+            ("confirmed", "Sync Until Invoiced"),
+            ("with_adjustments", "Sync With Credit Note Adjustments"),
+        ],
+        string="Order Edit Sync Mode",
+        default="draft_sent",
+        help="How Shopify order edits (orders/updated) are applied to existing Odoo sale orders.",
+    )
+    partial_payment_mode = fields.Selection(
+        [
+            ("register_paid_amount", "Register Shopify Paid Amount"),
+            ("skip_until_paid", "Skip Payment Until Fully Paid"),
+        ],
+        string="Partial Payment Mode",
+        default="register_paid_amount",
+        help="How partially_paid Shopify orders register payments in Odoo.",
+    )
+    refund_restock_mode = fields.Selection(
+        [
+            ("credit_note_only", "Credit Note Only"),
+            ("odoo_restock", "Credit Note + Odoo Restock"),
+            ("both", "Credit Note + Restock (same as Odoo Restock)"),
+        ],
+        string="Refund Restock Mode",
+        default="credit_note_only",
+        help="Whether Shopify refunds also create return pickings in Odoo.",
+    )
+    refund_restock_validate = fields.Boolean(
+        string="Auto-Validate Return Pickings",
+        default=False,
+        help="If enabled, return pickings from refunds are validated automatically.",
+    )
+    default_return_warehouse_id = fields.Many2one(
+        "stock.warehouse",
+        string="Default Return Warehouse",
+        help="Warehouse used for refund restock when Shopify location is not mapped.",
+    )
+    outbound_refund_restock_type = fields.Selection(
+        [
+            ("no_restock", "No Restock"),
+            ("return", "Return"),
+            ("cancel", "Cancel"),
+        ],
+        string="Outbound Refund Restock Type",
+        default="no_restock",
+        help="restock_type sent to Shopify when pushing refunds from Odoo.",
+    )
     order_import_start_date = fields.Datetime(
         string="Order Import Start Date",
         help="On first cron run, import orders created on or after this date instead of all history.",

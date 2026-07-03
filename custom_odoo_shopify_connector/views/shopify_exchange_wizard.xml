@@ -9,13 +9,18 @@
                     <field name="sale_order_id" readonly="1"/>
                     <field name="store_id" readonly="1"/>
                     <field name="note"/>
+                    <field name="total_return_amount" readonly="1"/>
+                    <field name="total_replacement_amount" readonly="1"/>
+                    <field name="price_difference" readonly="1"/>
                 </group>
                 <field name="line_ids">
                     <list editable="bottom">
                         <field name="sale_line_id" readonly="1"/>
+                        <field name="original_unit_price" readonly="1"/>
                         <field name="return_qty"/>
                         <field name="replacement_product_id"/>
                         <field name="replacement_qty"/>
+                        <field name="replacement_price_unit"/>
                     </list>
                 </field>
                 <footer>

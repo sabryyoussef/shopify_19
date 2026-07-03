@@ -41,6 +41,7 @@
                             <field name="shopify_order_total" readonly="1"/>
                             <field name="shopify_gateway_fee" readonly="1"/>
                             <field name="shopify_net_received" readonly="1"/>
+                            <field name="shopify_amount_paid" readonly="1"/>
                             <field name="shopify_refunded_amount" readonly="1"/>
                             <field name="shopify_refunded" readonly="1"/>
                             <field name="shopify_exchange_parent_id" readonly="1"/>

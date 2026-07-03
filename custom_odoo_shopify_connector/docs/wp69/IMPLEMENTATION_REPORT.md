@@ -74,6 +74,23 @@ Run: `odoo-bin -d odoo_test --test-enable --test-tags=/custom_odoo_shopify_conne
 
 ---
 
+## WP70 Post-UAT Remediation (2026-07-02)
+
+Module bumped to **19.0.1.0.5**. See `docs/wp70/REMEDIATION_PLAN.md`.
+
+| Gap | Status | Implementation |
+|-----|--------|----------------|
+| G6 Auto-create product flag | **Fixed** | `order_service._resolve_line_product()` |
+| G1 Partial payment | **Implemented** | `PaymentFeeService.extract_paid_amount`, `shopify_amount_paid`, payment register |
+| G2 Cancel → credit note | **Implemented** | `RefundSyncService.sync_cancel_reversal`, `cancel_sync_mode` |
+| G4 Exchange price diff | **Implemented** | Exchange wizard `replacement_price_unit`, balance/adjustment lines |
+| G5 Refund restock | **Implemented** | `ReturnPickingService`, `refund_restock_mode` |
+| G3 Order edit sync | **Implemented** | `OrderUpdateService`, `order_edit_sync_mode` |
+| G7 Automated tests | **Implemented** | 4 new test modules + partial payment tests |
+| G8 Screenshots | **Pending** | Requires live `odoo_test` UI capture |
+
+---
+
 ## Admin configuration (iZone store)
 
 1. **Store → Orders:** set `delivery_product_id`, `payment_fee_product_id`, optional `order_import_start_date`

@@ -39,6 +39,7 @@ class ShopifySyncLog(models.Model):
             ("product", "Product"),
             ("customer", "Customer"),
             ("order", "Order"),
+            ("refund", "Refund"),
             ("inventory", "Inventory"),
             ("shipping", "Shipping"),
             ("fulfillment", "Fulfillment"),

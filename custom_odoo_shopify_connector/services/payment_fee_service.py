@@ -77,6 +77,41 @@ class PaymentFeeService:
                 break
         return order_total, float_round(net_received, 2)
 
+    def extract_paid_amount(self, payload):
+        """Sum successful sale transactions from Shopify order payload."""
+        total = 0.0
+        for txn in (payload or {}).get("transactions") or []:
+            if (txn.get("kind") or "").lower() != "sale":
+                continue
+            if (txn.get("status") or "").lower() != "success":
+                continue
+            try:
+                total += float(txn.get("amount") or 0.0)
+            except (TypeError, ValueError):
+                continue
+        if total > 0.0:
+            return float_round(total, 2)
+        financial_status = ((payload or {}).get("financial_status") or "").lower()
+        if financial_status == "paid":
+            try:
+                return float_round(float((payload or {}).get("total_price") or 0.0), 2)
+            except (TypeError, ValueError):
+                pass
+        return 0.0
+
+    def extract_sale_transaction_ids(self, payload):
+        """Return Shopify transaction ids for successful sale payments."""
+        ids = []
+        for txn in (payload or {}).get("transactions") or []:
+            if (txn.get("kind") or "").lower() != "sale":
+                continue
+            if (txn.get("status") or "").lower() != "success":
+                continue
+            txn_id = txn.get("id")
+            if txn_id:
+                ids.append(str(txn_id))
+        return ids
+
     def apply_fee_to_order(self, order, fee_amount, gateway, store, payload):
         order.write(
             {

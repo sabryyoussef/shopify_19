@@ -31,6 +31,7 @@
 - [10. Limitations & Notes](#10-limitations--notes)
 - [11. FAQ](#11-faq-examples)
 - [12. Where to Go Next](#12-where-to-go-next)
+- [User Guide (screenshots & use cases)](docs/user-guide/USER_GUIDE.md) — [plain text](docs/user-guide/USER_GUIDE.txt)
 - [License & Support](#license--support)
 
 ---
