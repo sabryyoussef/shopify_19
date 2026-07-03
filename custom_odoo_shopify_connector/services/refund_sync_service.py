@@ -219,15 +219,52 @@ class RefundSyncService:
         refund_line_items = refund_payload.get("refund_line_items") or []
 
         if mode == "full" or not refund_line_items:
-            return self._create_full_reversal(store, order, invoice, refund_payload)
+            credit = self._create_full_reversal(store, order, invoice, refund_payload)
+        else:
+            mapped = self._map_refund_lines(order, refund_line_items)
+            if not mapped:
+                credit = self._create_full_reversal(store, order, invoice, refund_payload)
+            else:
+                credit = self._create_partial_credit_note(
+                    store, order, invoice, refund_payload, mapped
+                )
+                if credit and store.refund_restock_mode in ("odoo_restock", "both"):
+                    from .return_picking_service import ReturnPickingService
 
-        mapped = self._map_refund_lines(order, refund_line_items)
-        if not mapped:
-            return self._create_full_reversal(store, order, invoice, refund_payload)
+                    ReturnPickingService(self.env).create_return_from_refund(
+                        store, order, refund_payload, mapped
+                    )
+        return credit
 
-        return self._create_partial_credit_note(
-            store, order, invoice, refund_payload, mapped
-        )
+    def sync_cancel_reversal(self, store, order, cancel_reason=None):
+        """Create credit note for posted invoice when Shopify order is cancelled."""
+        if not store or not order:
+            return self.env["account.move"]
+        if (store.cancel_sync_mode or "credit_note") == "cancel_only":
+            return self.env["account.move"]
+
+        cancel_refund_id = "cancel-%s" % (order.shopify_order_id or order.id)
+        if self._refund_already_processed(cancel_refund_id):
+            return self.env["account.move"]
+
+        invoice = self._find_posted_invoice(order)
+        if not invoice:
+            return self.env["account.move"]
+
+        refund_payload = {
+            "id": cancel_refund_id,
+            "note": cancel_reason or _("Shopify order cancelled"),
+        }
+        credit = self._create_full_reversal(store, order, invoice, refund_payload)
+        if credit:
+            self._log(
+                store,
+                _("Credit note %s created for cancelled Shopify order %s.")
+                % (credit.name, order.shopify_order_id),
+                {"credit_note": credit.name, "reason": cancel_reason},
+                order_id=order.shopify_order_id,
+            )
+        return credit
 
     def sync_refund_from_order_payload(self, store, order, payload):
         """Handle partially_refunded / refunded on fulfilled order import."""
@@ -248,6 +285,8 @@ class RefundSyncService:
 
     def build_shopify_refund_payload(self, credit_note, sale_order):
         """Build Shopify Refunds API payload from Odoo credit note lines."""
+        store = sale_order.shopify_instance_id
+        restock_type = (store.outbound_refund_restock_type if store else "no_restock") or "no_restock"
         refund_line_items = []
         for inv_line in credit_note.invoice_line_ids.filtered(lambda l: not l.display_type):
             sale_line = sale_order.order_line.filtered(
@@ -259,7 +298,7 @@ class RefundSyncService:
                 {
                     "line_item_id": int(sale_line.shopify_line_item_id),
                     "quantity": int(inv_line.quantity),
-                    "restock_type": "no_restock",
+                    "restock_type": restock_type,
                 }
             )
 

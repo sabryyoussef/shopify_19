@@ -1,4 +1,5 @@
 from odoo import _
+from odoo.exceptions import ValidationError
 from odoo.tools import float_round
 
 
@@ -184,17 +185,25 @@ class OrderService:
         if not product and sku:
             product = product_by_sku.get(sku)
 
-        # 4) Auto-create product if still not found
+        # 4) Auto-create product if still not found (when enabled on store)
         if not product:
+            if store and not store.auto_create_product_if_not_found:
+                raise ValidationError(
+                    _(
+                        "Product not found in Odoo for SKU '%(sku)s' (variant %(variant)s). "
+                        "Map the variant in Product Mapping or enable Auto Create Products on the store."
+                    )
+                    % {
+                        "sku": sku or "-",
+                        "variant": variant_id or "-",
+                    }
+                )
             vals = {
                 "name": name,
                 "default_code": sku,
                 "lst_price": price,
             }
-            if store and store.auto_create_product_if_not_found:
-                product = ProductProduct.create(vals)
-            else:
-                product = ProductProduct.create(vals)
+            product = ProductProduct.create(vals)
             if sku:
                 product_by_sku[sku] = product
             if variant_id:
@@ -317,6 +326,12 @@ class OrderService:
             shopify_user_id = self._resolve_shopify_user_id(store)
             if shopify_user_id and existing.user_id.id != shopify_user_id:
                 existing.write({"user_id": shopify_user_id})
+            if store and (store.order_edit_sync_mode or "draft_sent") != "ignore":
+                from .order_update_service import OrderUpdateService
+
+                OrderUpdateService(self.env, import_service=self.import_service).update_order_from_payload(
+                    existing, payload, store
+                )
             return existing
 
         customer = payload.get("customer") or {}

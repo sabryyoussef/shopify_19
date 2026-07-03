@@ -71,6 +71,10 @@ class SaleOrder(models.Model):
         string="Shopify Net Received",
         help="Net amount received after payment gateway fees.",
     )
+    shopify_amount_paid = fields.Float(
+        string="Shopify Amount Paid",
+        help="Cumulative amount registered from Shopify payments.",
+    )
     shopify_gateway_fee = fields.Float(
         string="Shopify Gateway Fee",
         help="Computed payment gateway fee for this order.",
@@ -90,6 +94,10 @@ class SaleOrder(models.Model):
         "sale.order",
         "shopify_exchange_parent_id",
         string="Exchange Replacement Orders",
+    )
+    shopify_exchange_price_diff = fields.Float(
+        string="Exchange Price Difference",
+        help="Replacement total minus returned total (positive = customer owes more).",
     )
     shopify_sync_log_count = fields.Integer(
         compute="_compute_shopify_timeline_counts",

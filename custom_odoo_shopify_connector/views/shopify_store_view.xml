@@ -78,6 +78,13 @@
                                     <field name="delivery_product_id"/>
                                     <field name="payment_fee_product_id"/>
                                     <field name="refund_sync_mode"/>
+                                    <field name="cancel_sync_mode"/>
+                                    <field name="order_edit_sync_mode"/>
+                                    <field name="partial_payment_mode"/>
+                                    <field name="refund_restock_mode"/>
+                                    <field name="refund_restock_validate" invisible="refund_restock_mode == 'credit_note_only'"/>
+                                    <field name="default_return_warehouse_id" invisible="refund_restock_mode == 'credit_note_only'"/>
+                                    <field name="outbound_refund_restock_type"/>
                                     <field name="use_odoo_sequence"/>
                                     <field name="order_prefix" invisible="use_odoo_sequence"/>
                                     <field name="default_pos_customer_id"/>

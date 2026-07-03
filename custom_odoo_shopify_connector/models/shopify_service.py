@@ -1,4 +1,5 @@
 import json
+import logging
 import time
 
 from odoo import api, fields, models, _
@@ -6,6 +7,8 @@ from odoo.exceptions import UserError
 
 from ..services.queue_service import _shopify_datetime
 from ..services.retry_policy import classify_exception, next_retry_at
+
+_logger = logging.getLogger(__name__)
 
 
 class ShopifyService(models.AbstractModel):
@@ -721,6 +724,15 @@ class ShopifyService(models.AbstractModel):
         )
 
         if sale_order:
+            try:
+                from ..services.refund_sync_service import RefundSyncService
+
+                RefundSyncService(self.env).sync_cancel_reversal(
+                    store, sale_order, reason or "other"
+                )
+            except Exception:
+                _logger.exception("Cancel credit note failed for order %s", shopify_order_id)
+
             vals = {
                 "shopify_cancelled": True,
                 "shopify_cancel_reason": reason or "other",

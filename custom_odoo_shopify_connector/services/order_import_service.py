@@ -754,57 +754,69 @@ class OrderImportService:
 
         # STEP 3: Create invoice
         if workflow.create_invoice and order.state in ("sale", "done"):
-            try:
-                invoices = order._create_invoices()
+            existing_invoices = order.invoice_ids.filtered(
+                lambda m: m.move_type == "out_invoice" and m.state != "cancel"
+            )
+            if existing_invoices:
+                invoices = existing_invoices
+            else:
+                try:
+                    invoices = order._create_invoices()
 
-                # Optionally force accounting date and sales journal
-                if invoices:
-                    if workflow.force_accounting_date and order.date_order:
-                        for inv in invoices:
-                            inv.invoice_date = fields.Date.to_date(order.date_order)
-                    if workflow.sales_journal_id:
-                        invoices.write({"journal_id": workflow.sales_journal_id.id})
+                    # Optionally force accounting date and sales journal
+                    if invoices:
+                        if workflow.force_accounting_date and order.date_order:
+                            for inv in invoices:
+                                inv.invoice_date = fields.Date.to_date(order.date_order)
+                        if workflow.sales_journal_id:
+                            invoices.write({"journal_id": workflow.sales_journal_id.id})
 
-                self._log(
-                    store,
-                    _("Invoice(s) created for sale order %s by auto workflow.")
-                    % order.name,
-                    {"order_id": order.id, "invoice_ids": invoices.ids},
-                    "success",
-                )
-            except Exception as e:
-                self._log(
-                    store,
-                    _("Failed to create invoices for sale order %s: %s")
-                    % (order.name, e),
-                    payload_data,
-                    "failed",
-                )
-                return
+                    self._log(
+                        store,
+                        _("Invoice(s) created for sale order %s by auto workflow.")
+                        % order.name,
+                        {"order_id": order.id, "invoice_ids": invoices.ids},
+                        "success",
+                    )
+                except Exception as e:
+                    self._log(
+                        store,
+                        _("Failed to create invoices for sale order %s: %s")
+                        % (order.name, e),
+                        payload_data,
+                        "failed",
+                    )
+                    return
 
         # STEP 4: Validate invoice
         if workflow.validate_invoice and invoices:
-            try:
-                invoices.action_post()
-                self._log(
-                    store,
-                    _("Invoice(s) validated for sale order %s by auto workflow.")
-                    % order.name,
-                    {"order_id": order.id, "invoice_ids": invoices.ids},
-                    "success",
-                )
-            except Exception as e:
-                self._log(
-                    store,
-                    _("Failed to validate invoices for sale order %s: %s")
-                    % (order.name, e),
-                    {"order_id": order.id, "invoice_ids": invoices.ids},
-                    "failed",
-                )
-                return
+            invoices = invoices.filtered(lambda m: m.state == "draft")
+            if invoices:
+                try:
+                    invoices.action_post()
+                    self._log(
+                        store,
+                        _("Invoice(s) validated for sale order %s by auto workflow.")
+                        % order.name,
+                        {"order_id": order.id, "invoice_ids": invoices.ids},
+                        "success",
+                    )
+                except Exception as e:
+                    self._log(
+                        store,
+                        _("Failed to validate invoices for sale order %s: %s")
+                        % (order.name, e),
+                        {"order_id": order.id, "invoice_ids": invoices.ids},
+                        "failed",
+                    )
+                    return
+
+        posted_invoices = order.invoice_ids.filtered(
+            lambda m: m.move_type == "out_invoice" and m.state == "posted"
+        )
 
         # STEP 5: Register payment
-        if workflow.register_payment and invoices:
+        if workflow.register_payment and posted_invoices:
             payment_journal = workflow.payment_journal_id
             payment_method = workflow.payment_method_id
 
@@ -838,48 +850,115 @@ class OrderImportService:
                             "success",
                         )
 
-            if not payment_journal or not payment_method:
+            if not payment_journal:
                 self._log(
                     store,
                     _(
                         "Payment registration skipped for sale order %s because "
-                        "payment journal or method is not configured on the workflow."
+                        "payment journal is not configured on the workflow."
                     )
                     % order.name,
-                    {"order_id": order.id, "invoice_ids": invoices.ids},
+                    {"order_id": order.id, "invoice_ids": posted_invoices.ids},
                     "failed",
                 )
                 return
 
             try:
-                amount = sum(invoices.mapped("amount_residual"))
+                from .payment_fee_service import PaymentFeeService
+
+                fee_service = PaymentFeeService(self.env, import_service=self)
+                financial_status = ((payload or {}).get("financial_status") or "").lower()
+                partial_mode = store.partial_payment_mode or "register_paid_amount"
+
+                if partial_mode == "skip_until_paid" and financial_status == "partially_paid":
+                    self._log(
+                        store,
+                        _("Payment registration skipped for partially paid order %s.")
+                        % order.name,
+                        {"order_id": order.id},
+                        "success",
+                    )
+                    return
+
+                amount_residual = sum(posted_invoices.mapped("amount_residual"))
                 if order.shopify_fee_discount_pending:
-                    amount = max(0.0, amount - order.shopify_fee_discount_pending)
+                    amount_residual = max(0.0, amount_residual - order.shopify_fee_discount_pending)
+
+                if financial_status in ("partially_paid", "paid"):
+                    target_paid = fee_service.extract_paid_amount(payload or {})
+                    if order.shopify_fee_discount_pending and target_paid:
+                        target_paid = max(0.0, target_paid - order.shopify_fee_discount_pending)
+                    already_paid = order.shopify_amount_paid or 0.0
+                    amount = min(max(0.0, target_paid - already_paid), amount_residual)
+                else:
+                    amount = amount_residual
+
                 if not amount:
                     return
 
-                payment_vals = {
-                    "payment_type": "inbound",
-                    "partner_type": "customer",
-                    "partner_id": order.partner_id.id,
-                    "amount": amount,
-                    "currency_id": order.currency_id.id,
-                    "journal_id": payment_journal.id,
-                    "payment_method_id": payment_method.id,
-                    "ref": _("Payment for Shopify order %s") % (order.shopify_order_id or order.name),
-                    "date": fields.Date.context_today(self.env.user),
-                }
-                payment = self.env["account.payment"].create(payment_vals)
-                payment.action_post()
+                txn_ids = fee_service.extract_sale_transaction_ids(payload or {})
+                Payment = self.env["account.payment"]
+                for txn_id in txn_ids:
+                    if Payment.search_count([("shopify_transaction_id", "=", txn_id)]):
+                        self._log(
+                            store,
+                            _("Payment already registered for Shopify transaction %s.") % txn_id,
+                            {"order_id": order.id, "transaction_id": txn_id},
+                            "success",
+                        )
+                        return
+
+                payments = self.env["account.payment"]
+                try:
+                    method_line = payment_journal.inbound_payment_method_line_ids[:1]
+                    if not method_line and payment_method:
+                        method_line = payment_journal.inbound_payment_method_line_ids.filtered(
+                            lambda l: l.payment_method_id == payment_method
+                        )[:1]
+                    register_wizard = (
+                        self.env["account.payment.register"]
+                        .with_context(active_model="account.move", active_ids=posted_invoices.ids)
+                        .create(
+                            {
+                                "amount": amount,
+                                "journal_id": payment_journal.id,
+                                "payment_method_line_id": method_line.id if method_line else False,
+                            }
+                        )
+                    )
+                    payments = register_wizard._create_payments()
+                except Exception:
+                    payment_vals = {
+                        "payment_type": "inbound",
+                        "partner_type": "customer",
+                        "partner_id": order.partner_id.id,
+                        "amount": amount,
+                        "currency_id": order.currency_id.id,
+                        "journal_id": payment_journal.id,
+                        "ref": _("Payment for Shopify order %s")
+                        % (order.shopify_order_id or order.name),
+                        "date": fields.Date.context_today(self.env.user),
+                    }
+                    if payment_method:
+                        payment_vals["payment_method_id"] = payment_method.id
+                    payments = Payment.create(payment_vals)
+                    payments.action_post()
+
+                shopify_txn_id = txn_ids[0] if txn_ids else False
+                if payments and shopify_txn_id:
+                    payments.write({"shopify_transaction_id": shopify_txn_id})
+
+                order.write({"shopify_amount_paid": (order.shopify_amount_paid or 0.0) + amount})
 
                 self._log(
                     store,
-                    _("Payment registered for sale order %s by auto workflow.")
-                    % order.name,
+                    _("Payment registered for sale order %s by auto workflow (amount=%s).")
+                    % (order.name, amount),
                     {
                         "order_id": order.id,
-                        "invoice_ids": invoices.ids,
-                        "payment_id": payment.id,
+                        "invoice_ids": posted_invoices.ids,
+                        "payment_ids": payments.ids if payments else [],
+                        "amount": amount,
                     },
                     "success",
                 )
@@ -888,7 +967,7 @@ class OrderImportService:
                     store,
                     _("Failed to register payment for sale order %s: %s")
                     % (order.name, e),
-                    {"order_id": order.id, "invoice_ids": invoices.ids},
+                    {"order_id": order.id, "invoice_ids": posted_invoices.ids},
                     "failed",
                 )
 

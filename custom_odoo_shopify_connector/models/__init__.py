@@ -32,6 +32,7 @@ from . import shopify_service
 from . import shopify_cancel_wizard
 from . import shopify_exchange_wizard
 from . import account_move
+from . import account_payment
 from . import shopify_refund_wizard
 from . import product_product
 from . import shopify_stock_service
