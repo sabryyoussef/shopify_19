@@ -120,6 +120,20 @@ class OrderUpdateService:
     def _sync_lines_in_place(self, order, payload, store):
         from .order_service import OrderService
 
+        # Confirmed sale orders may be locked; safe pre-invoice edits require a
+        # temporary unlock. The lock state is always restored afterwards.
+        was_locked = bool(getattr(order, "locked", False))
+        if was_locked:
+            order.sudo().write({"locked": False})
+        try:
+            self._sync_lines_in_place_unlocked(order, payload, store)
+        finally:
+            if was_locked and order.exists():
+                order.sudo().write({"locked": True})
+
+    def _sync_lines_in_place_unlocked(self, order, payload, store):
+        from .order_service import OrderService
+
         order_service = OrderService(self.env, import_service=self.import_service)
         line_items = payload.get("line_items") or []
         payload_ids = {str(item.get("id")) for item in line_items if item.get("id")}
