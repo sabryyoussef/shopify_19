@@ -19,3 +19,4 @@ from . import test_webhook_replay
 from . import test_p8_logging
 from . import test_p2_update_sync
 from . import test_p567_financial
+from . import test_p4_fulfillment

@@ -937,16 +937,18 @@ class OrderImportService:
             return plan
 
         if category == "cod":
+            # COD: the invoice is driven by delivery completion (invoice_timing),
+            # NOT by collection. The on_delivery gate below suppresses the invoice
+            # until the Shopify fulfillment marks the Odoo picking done (P4). A
+            # payment is only registered once collection is confirmed
+            # (financial_status paid/partially_paid) with evidence.
+            plan["create_invoice"] = want_invoice
+            plan["post_invoice"] = want_post
             if fin in ("paid", "partially_paid"):
-                # COD collection confirmed -> invoice + register collection.
-                plan["create_invoice"] = want_invoice
-                plan["post_invoice"] = want_post
                 plan["register_payment"] = want_payment
                 plan["reason"] = "cod_collected"
             else:
-                # COD pending -> confirm only, no premature invoice/payment.
-                plan["reason"] = "cod_pending confirm_only"
-                return plan
+                plan["reason"] = "cod_pending"
         elif category in ("online", "bank", "manual"):
             if fin in ("paid", "partially_paid"):
                 plan["create_invoice"] = want_invoice
@@ -1319,4 +1321,47 @@ class OrderImportService:
                     {"order_id": order.id, "invoice_ids": posted_invoices.ids},
                     "failed",
                 )
+
+    def trigger_invoice_on_delivery(self, order, store, correlation_id=None, financial_status=None):
+        """P4/P5 — invoice-on-delivery hook.
+
+        Called after a Shopify fulfillment marks the Odoo delivery done. Only
+        acts for workflows configured with ``invoice_timing == 'on_delivery'``
+        (COD): online/immediate workflows were already invoiced at import, so
+        this is a safe no-op for them (idempotent, no duplicate invoice/payment).
+
+        Payment is never registered here unless collection evidence exists, which
+        it does not for a plain fulfillment event; ``decide_financial_actions``
+        keeps payment gated. This proves *fulfillment completed != payment
+        collected*.
+        """
+        if not (order and store) or not self._delivery_completed(order):
+            return False
+
+        # A plain fulfillment event carries no collection evidence, so default to
+        # 'pending' (collection not confirmed). This resolves the COD gateway's
+        # on-delivery workflow while keeping payment gated off.
+        payload = {
+            "id": order.shopify_order_id,
+            "name": order.name,
+            "financial_status": (financial_status or "pending").strip(),
+            "gateway": order.shopify_payment_gateway or "",
+            "payment_gateway_names": (
+                [order.shopify_payment_gateway] if order.shopify_payment_gateway else []
+            ),
+        }
+
+        workflow = self.get_financial_workflow(store, payload)
+        if not workflow:
+            return False
+        # Only COD/on-delivery workflows invoice at delivery time. Immediate
+        # workflows already invoiced at import; re-running is unnecessary and we
+        # avoid touching already-paid online orders.
+        if workflow.invoice_timing != "on_delivery":
+            return False
+
+        self.apply_workflow(
+            order, store, payload=payload, workflow=workflow, correlation_id=correlation_id
+        )
+        return True
 
