@@ -20,6 +20,13 @@ class SaleOrder(models.Model):
         index=True,
         help="Raw fulfillment status from Shopify (e.g. fulfilled, partial, unfulfilled).",
     )
+    shopify_updated_at = fields.Char(
+        string="Shopify Updated At",
+        index=True,
+        copy=False,
+        help="Raw Shopify order updated_at timestamp of the last synced state. Used by "
+        "polling reconciliation (P3) to detect changed orders without re-running CREATE.",
+    )
     shopify_fulfillment_ids = fields.Char(
         string="Shopify Fulfillment IDs",
         copy=False,

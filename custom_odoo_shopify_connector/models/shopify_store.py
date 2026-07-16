@@ -184,7 +184,22 @@ class ShopifyStore(models.Model):
     )
     last_order_import_time = fields.Datetime(
         string="Last Order Import Time",
-        help="Timestamp of the last successful order fetch from Shopify (used by scheduler).",
+        help="Created-orders checkpoint: Shopify created_at of the last successfully "
+        "processed new-order polling scan.",
+    )
+    last_order_update_time = fields.Datetime(
+        string="Last Order Update Reconcile Time",
+        help="Updated-orders checkpoint: Shopify updated_at of the last successfully "
+        "processed reconciliation polling scan (UPDATE / FULFILLMENT recovery). "
+        "Kept separate from the created checkpoint so lifecycle changes to already "
+        "imported orders are not missed.",
+    )
+    poll_overlap_minutes = fields.Integer(
+        string="Polling Overlap (minutes)",
+        default=10,
+        help="Overlap window subtracted from each polling checkpoint to avoid "
+        "timestamp-boundary misses. Idempotency makes reprocessing safe. "
+        "Recommended 5-10 minutes.",
     )
 
     def _resolve_import_order_salesperson_user(self):
@@ -643,66 +658,49 @@ class ShopifyStore(models.Model):
         return self._dashboard_open_queue_drilldown("active")
 
     def import_orders_scheduler(self):
-        """Cron entry point: fetch new Shopify orders per active store and
-        enqueue them for processing based on instance configuration.
+        """Cron entry point: new-order discovery (created checkpoint).
+
+        Polling is a fallback reconciliation path. This delegates to
+        ShopifyReconciliationService so both webhook and polling converge into the
+        same lifecycle router/services (no duplicated CREATE logic here). New
+        orders are enqueued as CREATE with cursor pagination, overlap-window
+        checkpointing and idempotent dedup.
         """
-        from ..services.queue_service import _shopify_datetime
-        from ..services.order_import_service import OrderImportService
-        import json
+        from ..services.reconciliation_service import ShopifyReconciliationService
 
-        stores = self.search([("active", "=", True)])
-        import_service = OrderImportService(self.env)
+        service = ShopifyReconciliationService(self.env)
+        for store in self.search([("active", "=", True)]):
+            service.scan_created_orders(store)
 
-        for store in stores:
-            api_client = store._get_api_client_for_scheduler(log_type="order")
-            if not api_client:
-                continue
-            params = {}
-            if store.last_order_import_time:
-                params["created_at_min"] = _shopify_datetime(store.last_order_import_time)
-            elif store.order_import_start_date:
-                params["created_at_min"] = _shopify_datetime(store.order_import_start_date)
+    def reconcile_orders_scheduler(self):
+        """Cron entry point: reconciliation fallback for changed/existing orders.
 
-            try:
-                orders = api_client.get_orders(**params)
-            except Exception as e:
-                self.env["shopify.sync.log.mixin"].create_log(
-                    store=store,
-                    log_type="order",
-                    message=str(e),
-                    payload=False,
-                    status="failed",
-                )
-                continue
+        Uses the updated_at checkpoint (separate from created) to recover missed
+        UPDATE and FULFILLMENT events for already-imported orders. Never re-runs
+        the CREATE workflow and is not blocked by new-order import filters.
+        """
+        if not license_is_active_strict(self.env):
+            import logging
 
-            Queue = self.env["shopify.order.queue"]
-            latest_shopify_created_at = False
-            for order in orders:
-                if not import_service.should_import_order(store, order):
-                    continue
-                created_at = order.get("created_at")
-                if created_at and (
-                    not latest_shopify_created_at or created_at > latest_shopify_created_at
-                ):
-                    latest_shopify_created_at = created_at
-                Queue.create(
-                    {
-                        "store_id": store.id,
-                        "shopify_order_id": str(order.get("id") or ""),
-                        "payload": json.dumps(order),
-                        "state": "pending",
-                        "job_type": "order",
-                    }
-                )
+            logging.getLogger(__name__).warning(
+                "License inactive - cron skipped (order reconciliation)"
+            )
+            return
 
-            # Advance checkpoint only after queue records are successfully created.
-            # Use Shopify's latest order timestamp to avoid skipping ranges.
-            if latest_shopify_created_at:
-                try:
-                    checkpoint = latest_shopify_created_at.replace("T", " ").replace("Z", "")
-                    store.last_order_import_time = fields.Datetime.from_string(checkpoint)
-                except Exception:
-                    store.last_order_import_time = fields.Datetime.now()
+        from ..services.reconciliation_service import ShopifyReconciliationService
+
+        service = ShopifyReconciliationService(self.env)
+        for store in self.search([("active", "=", True)]):
+            service.scan_updated_orders(store)
+
+    def action_shopify_reconcile_now(self):
+        """Manual: run created + updated reconciliation scans for these stores."""
+        from ..services.reconciliation_service import ShopifyReconciliationService
+
+        service = ShopifyReconciliationService(self.env)
+        for store in self:
+            service.run_poll(store)
+        return True
 
     def cron_shopify_update_shipping_status(self):
         """Cron entry point: sync shipping status to Shopify for completed deliveries.

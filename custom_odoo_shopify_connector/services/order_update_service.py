@@ -102,6 +102,10 @@ class OrderUpdateService:
                 pass
         fulfillment_status = payload.get("fulfillment_status") or "unfulfilled"
         vals["shopify_fulfillment_status"] = fulfillment_status
+        # P3: advance the reconciliation baseline so polling won't re-detect this
+        # same edit as a change on the next run.
+        if payload.get("updated_at"):
+            vals["shopify_updated_at"] = str(payload.get("updated_at"))
         gateway_names = payload.get("payment_gateway_names") or []
         if isinstance(gateway_names, str):
             gateway_names = [gateway_names]
