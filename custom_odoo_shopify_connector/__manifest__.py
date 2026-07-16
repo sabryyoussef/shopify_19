@@ -1,6 +1,6 @@
 {
     "name": "Shopify Connector free trail version",
-    "version": "19.0.1.0.5",
+    "version": "19.0.1.1.0",
     "summary": "Integrate Odoo with Shopify to sync products, customers, orders, and inventory.",
     "description": """
 Shopify Connector for Odoo

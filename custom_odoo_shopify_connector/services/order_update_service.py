@@ -3,7 +3,17 @@ import logging
 from odoo import _
 from odoo.tools import float_round
 
+from . import lifecycle_logger as llog
+
 _logger = logging.getLogger(__name__)
+
+# Update strategy labels (greppable, stable).
+STRATEGY_IN_PLACE = "in_place"
+STRATEGY_ADJUSTMENT_REQUIRED = "adjustment_required"  # posted invoice, not yet paid
+STRATEGY_REFUND_REQUIRED = "refund_required"  # paid / partially paid accounting docs
+STRATEGY_SKIPPED_IGNORE = "skipped_mode_ignore"
+STRATEGY_BLOCKED_MODE = "blocked_confirmed_mode_restricted"
+STRATEGY_BLOCKED_STATE = "blocked_state"
 
 
 class OrderUpdateService:
@@ -13,7 +23,53 @@ class OrderUpdateService:
         self.env = env
         self.import_service = import_service
 
-    def _log(self, store, message, payload, status="success", order_id=False):
+    # ------------------------------------------------------------------
+    # Accounting-state helpers
+    # ------------------------------------------------------------------
+    def _posted_invoices(self, order):
+        return order.invoice_ids.filtered(
+            lambda m: m.state == "posted" and m.move_type == "out_invoice"
+        )
+
+    def _has_posted_invoice(self, order):
+        return bool(self._posted_invoices(order))
+
+    def _is_paid(self, order):
+        """True when any posted customer invoice has received payment."""
+        return any(
+            inv.payment_state in ("paid", "in_payment", "partial")
+            for inv in self._posted_invoices(order)
+        )
+
+    def select_update_strategy(self, order, store):
+        """Choose the safe update strategy for an existing order.
+
+        Approved order-edit rules:
+        - Draft / Sent / Confirmed-with-no-posted-invoice -> safe in-place edit.
+        - Posted invoice (not paid)  -> adjustment/credit-note required; never
+          modify the posted invoice directly.
+        - Paid                       -> credit-note / refund required; never
+          modify paid accounting documents.
+        """
+        mode = store.order_edit_sync_mode or "draft_sent"
+        if mode == "ignore":
+            return STRATEGY_SKIPPED_IGNORE
+        if self._is_paid(order):
+            return STRATEGY_REFUND_REQUIRED
+        if self._has_posted_invoice(order):
+            return STRATEGY_ADJUSTMENT_REQUIRED
+        # No posted invoice -> pre-invoice edits are safe where allowed.
+        if order.state in ("draft", "sent"):
+            return STRATEGY_IN_PLACE
+        if order.state == "sale":
+            # Confirmed but not invoiced: allowed only when the store opts in
+            # (keeps the conservative 'draft_sent' default unchanged).
+            if mode in ("confirmed", "with_adjustments"):
+                return STRATEGY_IN_PLACE
+            return STRATEGY_BLOCKED_MODE
+        return STRATEGY_BLOCKED_STATE
+
+    def _log(self, store, message, payload, status="success", order_id=False, correlation_id=None):
         self.env["shopify.sync.log.mixin"].create_log(
             store=store,
             log_type="order",
@@ -21,6 +77,7 @@ class OrderUpdateService:
             payload=payload,
             status=status,
             order_id=order_id,
+            correlation_id=correlation_id,
         )
 
     def _can_update_lines_in_place(self, order, store):
@@ -156,28 +213,122 @@ class OrderUpdateService:
             order_id=order.shopify_order_id,
         )
 
-    def update_order_from_payload(self, order, payload, store):
+    def update_order_from_payload(self, order, payload, store, trace=None):
         if not order or not store:
             return order
 
-        mode = store.order_edit_sync_mode or "draft_sent"
-        if mode == "ignore":
-            return order
-
-        self._update_order_header(order, payload)
-
-        if self._can_update_lines_in_place(order, store):
-            self._sync_lines_in_place(order, payload, store)
-        elif mode == "with_adjustments" and order.state == "sale":
-            self._sync_lines_with_adjustments(order, payload, store)
+        if trace is None:
+            trace = llog.LifecycleTrace(
+                op=llog.OP_UPDATE,
+                shop_order=order.shopify_order_id,
+                so=order.name,
+            )
         else:
+            trace.bind(so=order.name)
+
+        mode = store.order_edit_sync_mode or "draft_sent"
+        strategy = self.select_update_strategy(order, store)
+        trace.step(
+            llog.STEP_UPDATE_STRATEGY_SELECTED,
+            so=order.name,
+            msg="strategy=%s state=%s mode=%s" % (strategy, order.state, mode),
+        )
+
+        if strategy == STRATEGY_SKIPPED_IGNORE:
             self._log(
                 store,
-                _("Shopify order edit received for %s but line sync skipped (state=%s, mode=%s).")
-                % (order.name, order.state, mode),
-                {"shopify_order_id": order.shopify_order_id},
+                _("Shopify order edit ignored for %s (order_edit_sync_mode=ignore).")
+                % order.name,
+                {"shopify_order_id": order.shopify_order_id, "strategy": strategy},
+                order_id=order.shopify_order_id,
+                correlation_id=trace.correlation_id,
+            )
+            trace.step(llog.STEP_SKIPPED, so=order.name, status="skipped", msg=strategy)
+            return order
+
+        # Safe metadata header update is allowed in every non-ignore case: these
+        # are Shopify tracking fields on the sale order, not accounting documents.
+        self._update_order_header(order, payload)
+
+        if strategy == STRATEGY_IN_PLACE:
+            self._sync_lines_in_place(order, payload, store)
+            trace.step(
+                llog.STEP_SO_UPDATED,
+                so=order.name,
+                msg="lines synced in place",
+            )
+        elif strategy == STRATEGY_ADJUSTMENT_REQUIRED:
+            if mode == "with_adjustments":
+                # Accounting-safe: create credit notes for reductions instead of
+                # touching the posted invoice.
+                self._sync_lines_with_adjustments(order, payload, store)
+                trace.step(
+                    llog.STEP_SO_UPDATED,
+                    so=order.name,
+                    msg="adjustments applied (credit note flow)",
+                )
+            else:
+                # Detect + log + block. Never modify the posted invoice directly
+                # while the adjustment flow is not enabled for this store.
+                self._log(
+                    store,
+                    _(
+                        "Shopify edit for %s has a POSTED invoice; direct line "
+                        "modification blocked. Adjustment/credit-note required "
+                        "(enable order_edit_sync_mode=with_adjustments to automate)."
+                    )
+                    % order.name,
+                    {"shopify_order_id": order.shopify_order_id, "strategy": strategy},
+                    status="failed",
+                    order_id=order.shopify_order_id,
+                    correlation_id=trace.correlation_id,
+                )
+                trace.step(
+                    llog.STEP_SO_UPDATED,
+                    so=order.name,
+                    status="blocked",
+                    msg="posted invoice: adjustment required, direct edit blocked",
+                )
+        elif strategy == STRATEGY_REFUND_REQUIRED:
+            # Never alter paid accounting documents.
+            self._log(
+                store,
+                _(
+                    "Shopify edit for %s has PAID accounting documents; direct "
+                    "modification blocked. Use credit note / refund / additional "
+                    "invoice per the accounting-safe flow."
+                )
+                % order.name,
+                {"shopify_order_id": order.shopify_order_id, "strategy": strategy},
                 status="failed",
                 order_id=order.shopify_order_id,
+                correlation_id=trace.correlation_id,
+            )
+            trace.step(
+                llog.STEP_SO_UPDATED,
+                so=order.name,
+                status="blocked",
+                msg="paid documents: refund/credit-note required, direct edit blocked",
+            )
+        else:
+            # BLOCKED_MODE / BLOCKED_STATE
+            self._log(
+                store,
+                _(
+                    "Shopify order edit received for %s but line sync skipped "
+                    "(state=%s, mode=%s, strategy=%s)."
+                )
+                % (order.name, order.state, mode, strategy),
+                {"shopify_order_id": order.shopify_order_id, "strategy": strategy},
+                status="failed",
+                order_id=order.shopify_order_id,
+                correlation_id=trace.correlation_id,
+            )
+            trace.step(
+                llog.STEP_SO_UPDATED,
+                so=order.name,
+                status="blocked",
+                msg=strategy,
             )
 
         from .payment_fee_service import PaymentFeeService

@@ -106,11 +106,16 @@ class ShopifyWebhookController(http.Controller):
             )
 
         try:
+            from ..services import lifecycle_logger as llog
+
             handler.process_webhook_order(
                 payload,
                 store,
                 shop_domain=shop_domain,
                 is_valid_hmac=valid,
+                operation=llog.operation_from_topic(topic),
+                webhook_id=webhook_id,
+                correlation_id="wh-%s" % (webhook_id or "") if webhook_id else None,
             )
             _logger.error("✅ Webhook processed successfully")
         except Exception as exc:

@@ -40,6 +40,12 @@ class ShopifySyncLog(models.Model):
         index=True,
         help="Shopify webhook delivery id when this log originates from a webhook.",
     )
+    correlation_id = fields.Char(
+        string="Correlation ID",
+        index=True,
+        help="Stable id linking all lifecycle log entries for one order across "
+        "webhook, queue, sale order, invoice and payment processing.",
+    )
     product_id = fields.Many2one(
         "product.product",
         string="Product",
@@ -228,6 +234,7 @@ class ShopifySyncLogMixin(models.AbstractModel):
         webhook_id=None,
         error_message=None,
         last_attempt_at=None,
+        correlation_id=None,
     ):
         # Always use sudo to ensure that technical logging never fails with
         # AccessError for regular users or background jobs.
@@ -248,5 +255,6 @@ class ShopifySyncLogMixin(models.AbstractModel):
                 "webhook_id": str(webhook_id) if webhook_id else False,
                 "error_message": error_message or (message if status == "failed" else False),
                 "last_attempt_at": last_attempt_at or False,
+                "correlation_id": (correlation_id or "").strip() or False,
             }
         )
