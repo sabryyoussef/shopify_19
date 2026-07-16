@@ -136,6 +136,10 @@ class OrderUpdateService:
 
         order_service = OrderService(self.env, import_service=self.import_service)
         line_items = payload.get("line_items") or []
+        # P7: propagate tax-inclusive flag so tax mapping matches import behaviour.
+        taxes_included = bool(payload.get("taxes_included"))
+        for item in line_items:
+            item.setdefault("_shopify_taxes_included", taxes_included)
         payload_ids = {str(item.get("id")) for item in line_items if item.get("id")}
 
         variant_map_by_id, product_by_variant_id, product_by_sku = order_service._prepare_line_product_lookups(

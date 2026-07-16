@@ -9,6 +9,7 @@
                 <field name="name"/>
                 <field name="instance_id"/>
                 <field name="payment_code"/>
+                <field name="gateway_type"/>
                 <field name="odoo_journal_id"/>
                 <field name="fee_percent"/>
                 <field name="fee_apply_mode"/>
@@ -30,6 +31,7 @@
                         </group>
                         <group>
                             <field name="payment_code"/>
+                            <field name="gateway_type"/>
                             <field name="active"/>
                             <field name="odoo_journal_id"/>
                         </group>

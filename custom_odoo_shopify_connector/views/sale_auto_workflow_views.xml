@@ -34,6 +34,8 @@
                             <field name="create_invoice"/>
                             <field name="validate_invoice"/>
                             <field name="register_payment"/>
+                            <field name="invoice_timing"/>
+                            <field name="require_payment_evidence"/>
                             <field name="force_accounting_date"/>
                         </group>
                         <group>

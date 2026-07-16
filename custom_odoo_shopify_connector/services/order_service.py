@@ -248,6 +248,12 @@ class OrderService:
         if not items:
             return items
 
+        # P7: propagate order-level tax-inclusive flag so tax mapping can pick a
+        # matching tax-inclusive/exclusive Odoo tax per line.
+        taxes_included = bool(payload.get("taxes_included"))
+        for item in items:
+            item["_shopify_taxes_included"] = taxes_included
+
         any_line_discount = any(
             (item.get("discount_allocations") or [])
             or float(item.get("total_discount") or 0.0) > 0.0
@@ -377,6 +383,16 @@ class OrderService:
         variant_map_by_id[str(variant_id)] = True
         return vals_map
 
+    def _shipping_line_price(self, ship):
+        """Net shipping price: prefer the discounted price when Shopify sends it."""
+        price = ship.get("discounted_price")
+        if price in (None, ""):
+            price = ship.get("price")
+        try:
+            return float_round(float(price or 0.0), 2)
+        except (TypeError, ValueError):
+            return 0.0
+
     def _create_shipping_lines(self, order, store, payload):
         if not (store and store.delivery_product_id):
             return
@@ -389,17 +405,34 @@ class OrderService:
         )
         if existing_ship_lines:
             return
+        taxes_included = bool(payload.get("taxes_included"))
         shipping_line_vals = []
         for ship in shipping_lines:
-            shipping_line_vals.append(
-                {
-                    "order_id": order.id,
-                    "product_id": store.delivery_product_id.id,
-                    "name": ship.get("title") or _("Shipping"),
-                    "product_uom_qty": 1.0,
-                    "price_unit": float_round(float(ship.get("price") or 0.0), 2),
-                }
-            )
+            # Skip shipping lines removed via Shopify order edit.
+            if ship.get("is_removed"):
+                continue
+            price = self._shipping_line_price(ship)
+            # P7: map shipping tax explicitly from Shopify shipping tax_lines.
+            # Always set tax_ids (even empty) so the delivery product's default
+            # customer tax cannot silently re-tax shipping.
+            taxes = self.env["account.tax"]
+            if self.import_service:
+                taxes = self.import_service.get_taxes_for_line(
+                    store, ship, taxes_included=taxes_included
+                )
+            vals = {
+                "order_id": order.id,
+                "product_id": store.delivery_product_id.id,
+                "name": ship.get("title") or _("Shipping"),
+                "product_uom_qty": 1.0,
+                "price_unit": price,
+            }
+            sale_line_model = self.env["sale.order.line"]
+            if "tax_ids" in sale_line_model._fields:
+                vals["tax_ids"] = [(6, 0, taxes.ids)]
+            elif "tax_id" in sale_line_model._fields:
+                vals["tax_id"] = [(6, 0, taxes.ids)]
+            shipping_line_vals.append(vals)
         if shipping_line_vals:
             self.env["sale.order.line"].create(shipping_line_vals)
 

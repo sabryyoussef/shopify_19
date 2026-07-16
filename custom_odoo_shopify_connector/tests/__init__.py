@@ -18,3 +18,4 @@ from . import test_idempotent_payment_and_refund
 from . import test_webhook_replay
 from . import test_p8_logging
 from . import test_p2_update_sync
+from . import test_p567_financial
