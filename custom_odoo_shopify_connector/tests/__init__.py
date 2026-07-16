@@ -10,4 +10,9 @@ from . import test_partial_payment
 from . import test_cancel_credit_note
 from . import test_order_update_sync
 from . import test_refund_restock
-
+from . import test_discount_scenarios
+from . import test_shipping_scenarios
+from . import test_exchange_wizard
+from . import test_cancel_before_invoice
+from . import test_idempotent_payment_and_refund
+from . import test_webhook_replay

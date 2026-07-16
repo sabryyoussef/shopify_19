@@ -20,6 +20,12 @@ class SaleOrder(models.Model):
         index=True,
         help="Raw fulfillment status from Shopify (e.g. fulfilled, partial, unfulfilled).",
     )
+    shopify_fulfillment_ids = fields.Char(
+        string="Shopify Fulfillment IDs",
+        copy=False,
+        index=True,
+        help="Comma-separated Shopify fulfillment ids already applied (idempotency).",
+    )
     shopify_fulfilled = fields.Boolean(
         string="Shopify Fulfilled",
         compute="_compute_shopify_fulfilled",
@@ -98,6 +104,16 @@ class SaleOrder(models.Model):
     shopify_exchange_price_diff = fields.Float(
         string="Exchange Price Difference",
         help="Replacement total minus returned total (positive = customer owes more).",
+    )
+    shopify_discount_source = fields.Char(
+        string="Shopify Discount Source",
+        help="Normalized discount sources from Shopify (coupon, automatic, unknown).",
+        index=True,
+    )
+    shopify_exchange_key = fields.Char(
+        string="Shopify Exchange Key",
+        index=True,
+        help="Idempotency key for exchange processing (e.g. exchange-<order_id>).",
     )
     shopify_sync_log_count = fields.Integer(
         compute="_compute_shopify_timeline_counts",

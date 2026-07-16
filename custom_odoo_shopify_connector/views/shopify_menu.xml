@@ -455,6 +455,14 @@
     />
 
     <menuitem
+        id="menu_shopify_logs_webhook_events"
+        name="Webhook Events"
+        parent="menu_shopify_logs_root"
+        action="action_shopify_webhook_event"
+        sequence="25"
+    />
+
+    <menuitem
         id="menu_shopify_logs_error"
         name="Error Logs"
         parent="menu_shopify_logs_root"

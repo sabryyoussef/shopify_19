@@ -81,7 +81,7 @@ class ShopifyImportQueue(models.Model):
 
         claimed = self._claim_for_processing()
         if not claimed:
-            self.invalidate_cache(["status"], [self.id])
+            self.invalidate_recordset(["status"])
             return
 
         self.error_message = False

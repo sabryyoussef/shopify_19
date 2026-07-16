@@ -86,6 +86,12 @@ class ShopifyExchangeWizard(models.TransientModel):
         from ..services.refund_sync_service import RefundSyncService
 
         refund_service = RefundSyncService(self.env)
+        exchange_key = "exchange-%s" % order.id
+        if order.shopify_exchange_key == exchange_key or order.shopify_exchange_child_ids:
+            raise UserError(_("An exchange has already been processed for this order."))
+        if refund_service._refund_already_processed(exchange_key):
+            raise UserError(_("An exchange credit note already exists for this order."))
+
         invoice = refund_service._find_posted_invoice(order)
         if not invoice:
             raise UserError(_("No posted invoice found for this order."))
@@ -133,7 +139,7 @@ class ShopifyExchangeWizard(models.TransientModel):
             raise UserError(_("Select at least one line to return."))
 
         refund_payload = {
-            "id": "exchange-%s" % order.id,
+            "id": exchange_key,
             "refund_line_items": refund_line_items,
             "note": self.note or _("Exchange"),
         }
@@ -148,39 +154,68 @@ class ShopifyExchangeWizard(models.TransientModel):
                     "line_item_id": "exchange-price-adjustment",
                 }
             )
+
+        # Create CN first; if replacement SO fails the CN keeps shopify_refund_id
+        # so a second attempt is blocked by the idempotency guard above.
         credit = refund_service._create_partial_credit_note(
             store, order, invoice, refund_payload, mapped
         )
+        if store.refund_restock_mode in ("odoo_restock", "both"):
+            from ..services.return_picking_service import ReturnPickingService
 
-        replacement_order = self.env["sale.order"].create(
-            {
-                "partner_id": order.partner_id.id,
-                "company_id": order.company_id.id,
-                "shopify_instance_id": store.id,
-                "shopify_exchange_parent_id": order.id,
-                "shopify_exchange_price_diff": price_diff,
-                "origin": _("Exchange for %s") % order.name,
-                "client_order_ref": _("EXCHANGE-%s") % order.client_order_ref,
-            }
-        )
-        for line_vals in replacement_lines:
-            line_vals["order_id"] = replacement_order.id
-            self.env["sale.order.line"].create(line_vals)
-
-        if price_diff > 0:
-            balance_product = store.payment_fee_product_id or self.env["product.product"].search(
-                [("default_code", "=", "EXCHANGE_BALANCE")], limit=1
+            ReturnPickingService(self.env).create_return_from_refund(
+                store, order, refund_payload, mapped
             )
-            if balance_product:
+
+        try:
+            replacement_order = self.env["sale.order"].create(
+                {
+                    "partner_id": order.partner_id.id,
+                    "company_id": order.company_id.id,
+                    "shopify_instance_id": store.id,
+                    "shopify_exchange_parent_id": order.id,
+                    "shopify_exchange_price_diff": price_diff,
+                    "origin": _("Exchange for %s") % order.name,
+                    "client_order_ref": _("EXCHANGE-%s") % (order.client_order_ref or order.name),
+                }
+            )
+            for line_vals in replacement_lines:
+                line_vals["order_id"] = replacement_order.id
+                self.env["sale.order.line"].create(line_vals)
+
+            if price_diff > 0:
+                balance_product = store.payment_fee_product_id or self.env["product.product"].search(
+                    [("default_code", "=", "EXCHANGE_BALANCE")], limit=1
+                )
+                if not balance_product:
+                    balance_product = self.env["product.product"].create(
+                        {
+                            "name": "Exchange Balance Due",
+                            "default_code": "EXCHANGE_BALANCE",
+                            "type": "service",
+                            "list_price": 0.0,
+                        }
+                    )
                 self.env["sale.order.line"].create(
                     {
                         "order_id": replacement_order.id,
                         "product_id": balance_product.id,
-                        "name": _("Exchange balance due"),
+                        "name": _("Exchange balance due (customer owes)"),
                         "product_uom_qty": 1.0,
                         "price_unit": price_diff,
                     }
                 )
+        except Exception:
+            # Leave CN in place; mark exchange key so retry is explicit admin action
+            order.write({"shopify_exchange_key": exchange_key, "shopify_exchange_price_diff": price_diff})
+            raise
+
+        order.write(
+            {
+                "shopify_exchange_key": exchange_key,
+                "shopify_exchange_price_diff": price_diff,
+            }
+        )
 
         return {
             "type": "ir.actions.act_window",

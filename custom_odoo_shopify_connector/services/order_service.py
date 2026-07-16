@@ -69,6 +69,10 @@ class OrderService:
         if shopify_user_id:
             order_vals["user_id"] = shopify_user_id
 
+        discount_source = self.extract_discount_sources(payload)
+        if discount_source:
+            order_vals["shopify_discount_source"] = discount_source
+
         # Order naming: either use Odoo sequence or Shopify order number with optional prefix
         if store and not store.use_odoo_sequence:
             shopify_name = payload.get("name")  # e.g. "#1044"
@@ -211,7 +215,8 @@ class OrderService:
 
         return product
 
-    def _compute_discount_pct(self, item, quantity, price):
+    def _line_discount_amount(self, item):
+        """Return absolute discount amount for a Shopify line item."""
         discount_amount = 0.0
         discount_allocations = item.get("discount_allocations") or []
         if discount_allocations:
@@ -221,14 +226,102 @@ class OrderService:
                 except Exception:
                     continue
         else:
-            discount_amount = float(item.get("total_discount") or 0.0)
+            try:
+                discount_amount = float(item.get("total_discount") or 0.0)
+            except Exception:
+                discount_amount = 0.0
+        # Order-level proportional share (set by prepare_line_items_with_discounts)
+        if item.get("_odoo_order_discount_share") is not None:
+            try:
+                discount_amount = float(item.get("_odoo_order_discount_share") or 0.0)
+            except Exception:
+                pass
+        return max(discount_amount, 0.0)
 
+    def prepare_line_items_with_discounts(self, payload):
+        """
+        Return a shallow-copied list of line items with discounts normalized.
+        When order total_discounts is present but lines have no allocations /
+        total_discount, distribute the order discount proportionally by line total.
+        """
+        items = [dict(item or {}) for item in (payload.get("line_items") or [])]
+        if not items:
+            return items
+
+        any_line_discount = any(
+            (item.get("discount_allocations") or [])
+            or float(item.get("total_discount") or 0.0) > 0.0
+            for item in items
+        )
+        try:
+            order_total_discount = float(payload.get("total_discounts") or 0.0)
+        except Exception:
+            order_total_discount = 0.0
+
+        if any_line_discount or order_total_discount <= 0.0:
+            return items
+
+        line_totals = []
+        for item in items:
+            qty = float(item.get("quantity") or 0.0)
+            price = float(item.get("price") or 0.0)
+            line_totals.append(max(qty * price, 0.0))
+        base = sum(line_totals)
+        if not base:
+            return items
+
+        allocated = 0.0
+        for idx, item in enumerate(items):
+            if idx == len(items) - 1:
+                share = float_round(order_total_discount - allocated, 2)
+            else:
+                share = float_round(order_total_discount * (line_totals[idx] / base), 2)
+                allocated += share
+            item["_odoo_order_discount_share"] = max(share, 0.0)
+        return items
+
+    def _compute_discount_pct(self, item, quantity, price):
+        discount_amount = self._line_discount_amount(item)
         discount_pct = 0.0
         if quantity and price and discount_amount:
             line_total = quantity * price
             if line_total:
                 discount_pct = (discount_amount / line_total) * 100.0
+                # Guard: never exceed 100%
+                if discount_pct > 100.0:
+                    discount_pct = 100.0
         return discount_pct
+
+    def extract_discount_sources(self, payload):
+        """
+        Classify Shopify discount applications as coupon / automatic / unknown.
+        Returns a comma-separated string for storage on sale.order.
+        """
+        sources = set()
+        apps = payload.get("discount_applications") or []
+        for app in apps:
+            app_type = (app.get("type") or "").lower()
+            target = (app.get("target_type") or "").lower()
+            code = app.get("code")
+            if app_type == "discount_code" or code:
+                sources.add("coupon")
+            elif app_type in ("automatic", "script") or target:
+                sources.add("automatic")
+            else:
+                sources.add("unknown")
+        # Fallbacks when applications are missing but discounts exist
+        if not sources:
+            has_line_disc = any(
+                self._line_discount_amount(item) > 0.0
+                for item in (payload.get("line_items") or [])
+            )
+            try:
+                total_discounts = float(payload.get("total_discounts") or 0.0)
+            except Exception:
+                total_discounts = 0.0
+            if has_line_disc or total_discounts > 0.0:
+                sources.add("unknown")
+        return ",".join(sorted(sources)) if sources else False
 
     def _build_order_line_vals(self, order, item, store, product):
         quantity = float(item.get("quantity") or 0.0)
@@ -236,17 +329,7 @@ class OrderService:
         name = item.get("name") or _("Shopify Item")
 
         discount_pct = self._compute_discount_pct(item, quantity, price)
-
-        discount_amount = 0.0
-        discount_allocations = item.get("discount_allocations") or []
-        if discount_allocations:
-            for alloc in discount_allocations:
-                try:
-                    discount_amount += float(alloc.get("amount") or 0.0)
-                except Exception:
-                    continue
-        else:
-            discount_amount = float(item.get("total_discount") or 0.0)
+        discount_amount = self._line_discount_amount(item)
 
         taxes = self.env["account.tax"]
         if self.import_service and store:
@@ -300,6 +383,12 @@ class OrderService:
         shipping_lines = payload.get("shipping_lines") or []
         if not shipping_lines:
             return
+        # Idempotency: do not duplicate delivery product lines for this order
+        existing_ship_lines = order.order_line.filtered(
+            lambda l: l.product_id.id == store.delivery_product_id.id
+        )
+        if existing_ship_lines:
+            return
         shipping_line_vals = []
         for ship in shipping_lines:
             shipping_line_vals.append(
@@ -347,7 +436,7 @@ class OrderService:
 
         self._ensure_order_mapping(store, shopify_order_id, order)
 
-        line_items = payload.get("line_items") or []
+        line_items = self.prepare_line_items_with_discounts(payload)
         variant_map_by_id, product_by_variant_id, product_by_sku = self._prepare_line_product_lookups(
             store, line_items
         )

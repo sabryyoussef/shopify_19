@@ -266,6 +266,57 @@ class RefundSyncService:
             )
         return credit
 
+    def cancel_order_from_shopify(self, store, order, cancel_reason=None):
+        """
+        Cancel an Odoo sale order in response to Shopify cancellation.
+        - Cancels draft invoices (no CN).
+        - Cancels open/unfinished pickings.
+        - Creates CN only when a posted invoice exists (via sync_cancel_reversal).
+        - Cancels the sale order itself.
+        Idempotent for already-cancelled orders.
+        """
+        if not order:
+            return False
+        if order.state == "cancel" or order.shopify_cancelled:
+            return True
+
+        # Cancel draft invoices safely (never create CN for drafts)
+        for invoice in order.invoice_ids.filtered(lambda m: m.state == "draft"):
+            try:
+                invoice.button_cancel()
+            except Exception:
+                invoice.write({"state": "cancel"})
+
+        # Cancel unfinished stock operations
+        for picking in order.picking_ids.filtered(lambda p: p.state not in ("done", "cancel")):
+            try:
+                picking.action_cancel()
+            except Exception:
+                picking.write({"state": "cancel"})
+
+        # CN only if posted invoice exists
+        self.sync_cancel_reversal(store, order, cancel_reason)
+
+        if order.state != "cancel":
+            try:
+                order.action_cancel()
+            except Exception:
+                order.write({"state": "cancel"})
+
+        order.write(
+            {
+                "shopify_cancelled": True,
+                "shopify_cancel_reason": cancel_reason or "shopify",
+            }
+        )
+        self._log(
+            store,
+            _("Odoo sale order %s cancelled from Shopify.") % order.name,
+            {"odoo_order": order.name, "reason": cancel_reason},
+            order_id=order.shopify_order_id,
+        )
+        return True
+
     def sync_refund_from_order_payload(self, store, order, payload):
         """Handle partially_refunded / refunded on fulfilled order import."""
         financial_status = (payload.get("financial_status") or "").lower()
