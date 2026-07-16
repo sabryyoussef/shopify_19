@@ -16,3 +16,5 @@ from . import test_exchange_wizard
 from . import test_cancel_before_invoice
 from . import test_idempotent_payment_and_refund
 from . import test_webhook_replay
+from . import test_p8_logging
+from . import test_p2_update_sync

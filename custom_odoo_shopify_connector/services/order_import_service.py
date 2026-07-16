@@ -4,6 +4,8 @@ import json
 from odoo import _, fields
 from odoo.exceptions import UserError
 
+from . import lifecycle_logger as llog
+
 
 _logger = logging.getLogger(__name__)
 
@@ -262,10 +264,12 @@ class OrderImportService:
         queue=None,
         order_service=None,
         fulfillment_service=None,
+        correlation_id=None,
     ):
         """Main Shopify order import wrapper used by the order queue worker."""
         order_data = order_data or {}
         shopify_order_id = order_data.get("id") or order_data.get("order_id") or False
+        correlation_id = correlation_id or getattr(queue, "correlation_id", None)
 
         _logger.error("📦 Importing Shopify order: %s", shopify_order_id)
         try:
@@ -309,9 +313,12 @@ class OrderImportService:
             fee_service = PaymentFeeService(self.env, import_service=self)
             fee_service.apply_fees_for_order(sale_order, store, order_data)
 
-            self.apply_workflow(sale_order, store, payload=order_data, workflow=workflow)
+            self.apply_workflow(
+                sale_order, store, payload=order_data, workflow=workflow,
+                correlation_id=correlation_id,
+            )
             fulfillment_service.handle_fulfillment(
-                sale_order, store, payload=order_data or {}
+                sale_order, store, payload=order_data or {}, correlation_id=correlation_id
             )
             # Cron imports run as OdooBot; workflow/invoice steps may reset salesperson — enforce store mapping again.
             shop_user = store._resolve_import_order_salesperson_user()
@@ -713,7 +720,7 @@ class OrderImportService:
 
         return self._find_or_create_tax(store, total_rate, name_hint=name_hint)
 
-    def apply_workflow(self, order, store, payload=None, workflow=None):
+    def apply_workflow(self, order, store, payload=None, workflow=None, correlation_id=None):
         """Apply the configured sales auto workflow on the sale order.
 
         If a workflow is provided (for example from financial status rules)
@@ -722,6 +729,19 @@ class OrderImportService:
         workflow = workflow or store.sale_auto_workflow_id
         if not workflow or not order:
             return
+
+        trace = llog.LifecycleTrace(
+            correlation_id=correlation_id,
+            op=llog.OP_CREATE,
+            shop_order=order.shopify_order_id,
+            so=order.name,
+        )
+        trace.step(
+            llog.STEP_INVOICE_DECISION,
+            so=order.name,
+            msg="create_invoice=%s validate_invoice=%s register_payment=%s"
+            % (workflow.create_invoice, workflow.validate_invoice, workflow.register_payment),
+        )
 
         # Apply shipment policy on the sale order
         if workflow.shipment_policy == "deliver_each_product":
@@ -817,6 +837,12 @@ class OrderImportService:
 
         # STEP 5: Register payment
         if workflow.register_payment and posted_invoices:
+            trace.step(
+                llog.STEP_PAYMENT_DECISION,
+                so=order.name,
+                msg="posted_invoices=%s financial_status=%s"
+                % (len(posted_invoices), (payload or {}).get("financial_status")),
+            )
             payment_journal = workflow.payment_journal_id
             payment_method = workflow.payment_method_id
 

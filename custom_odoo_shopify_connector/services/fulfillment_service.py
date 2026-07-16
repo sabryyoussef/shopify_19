@@ -1,6 +1,8 @@
 import logging
 from odoo import fields
 
+from . import lifecycle_logger as llog
+
 _logger = logging.getLogger(__name__)
 
 
@@ -194,13 +196,26 @@ class ShopifyFulfillmentService:
     # ---------------------------
     # MAIN ENTRY
     # ---------------------------
-    def handle_fulfillment(self, order, store, payload):
+    def handle_fulfillment(self, order, store, payload, correlation_id=None):
         if not order or not payload:
             return
+
+        trace = llog.LifecycleTrace(
+            correlation_id=correlation_id,
+            op=llog.OP_FULFILLMENT,
+            shop_order=getattr(order, "shopify_order_id", None),
+            so=order.name,
+        )
 
         # Idempotency check
         if self._is_already_processed(order, payload):
             _logger.info("Skipping already processed fulfillment")
+            trace.step(
+                llog.STEP_PICKING_UPDATED,
+                so=order.name,
+                status="idempotent",
+                msg="fulfillment already processed",
+            )
             return
 
         if self._apply_refund_guard(order):
@@ -215,13 +230,35 @@ class ShopifyFulfillmentService:
 
         pickings = self._get_pickings(order)
         if not pickings:
+            trace.step(
+                llog.STEP_PICKING_UPDATED,
+                so=order.name,
+                status="noop",
+                msg="no open pickings; fulfillment_status=%s" % fulfillment_status,
+            )
             return
 
         if fulfillment_status == "fulfilled":
             self._apply_full(pickings)
-
+            trace.step(
+                llog.STEP_PICKING_UPDATED,
+                so=order.name,
+                msg="full fulfillment applied to %s picking(s)" % len(pickings),
+            )
         elif fulfillment_status == "partial":
             self._apply_partial(order, pickings, payload)
+            trace.step(
+                llog.STEP_PICKING_UPDATED,
+                so=order.name,
+                msg="partial fulfillment applied to %s picking(s)" % len(pickings),
+            )
+        else:
+            trace.step(
+                llog.STEP_PICKING_UPDATED,
+                so=order.name,
+                status="noop",
+                msg="fulfillment_status=%s (no validation)" % fulfillment_status,
+            )
 
         # mark processed AFTER success
         self._mark_processed(order, payload)

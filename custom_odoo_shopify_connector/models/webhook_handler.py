@@ -8,6 +8,8 @@ from urllib.parse import urlparse
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
+from ..services import lifecycle_logger as llog
+
 
 _logger = logging.getLogger(__name__)
 
@@ -211,6 +213,8 @@ class ShopifyWebhookHandler(models.AbstractModel):
         if order_id and order_id != event.shopify_order_id:
             event.sudo().write({"shopify_order_id": order_id})
 
+        replay_operation = llog.operation_from_topic(topic)
+        replay_corr = "replay-%s" % (event.webhook_id or event.id)
         try:
             if topic.startswith("orders/") or topic in ("", "order", "orders/create", "orders/updated"):
                 self.process_webhook_order(
@@ -218,6 +222,9 @@ class ShopifyWebhookHandler(models.AbstractModel):
                     store,
                     shop_domain=event.shop_domain,
                     is_valid_hmac=True,
+                    operation=replay_operation,
+                    webhook_id=event.webhook_id,
+                    correlation_id=replay_corr,
                 )
             elif "refund" in topic:
                 # Delegate to existing refund webhook path via service (no controller logic)
@@ -253,6 +260,9 @@ class ShopifyWebhookHandler(models.AbstractModel):
                     store,
                     shop_domain=event.shop_domain,
                     is_valid_hmac=True,
+                    operation=replay_operation,
+                    webhook_id=event.webhook_id,
+                    correlation_id=replay_corr,
                 )
             self.mark_webhook_event_status(event, "processed")
             return True
@@ -262,10 +272,27 @@ class ShopifyWebhookHandler(models.AbstractModel):
             return False
 
     @api.model
-    def process_webhook_order(self, payload, store, shop_domain=None, is_valid_hmac=None):
-        try:
-            _logger.info("Processing Shopify order webhook")
+    def process_webhook_order(
+        self,
+        payload,
+        store,
+        shop_domain=None,
+        is_valid_hmac=None,
+        operation=None,
+        webhook_id=None,
+        correlation_id=None,
+    ):
+        """Enqueue a Shopify order event for lifecycle processing.
 
+        Routing rules (P2):
+        - New order            -> enqueue CREATE.
+        - Existing order + UPDATE (orders/updated) -> enqueue UPDATE
+          (must NOT be silently skipped).
+        - Existing order + CREATE (orders/create)  -> idempotent, no enqueue
+          (avoids duplicate sale orders on webhook replays).
+        - Legacy/auto ('order') for an existing order -> enqueue UPDATE.
+        """
+        try:
             if not store:
                 _logger.error("No matching store for domain: %s", shop_domain)
                 return False
@@ -275,27 +302,20 @@ class ShopifyWebhookHandler(models.AbstractModel):
                 return False
 
             shopify_order_id = payload.get("id") or payload.get("order_id")
+            op = operation or llog.OP_ORDER
+            trace = llog.LifecycleTrace(
+                correlation_id=correlation_id or llog.new_correlation_id(),
+                op=op,
+                shop_order=shopify_order_id,
+                shop_name=payload.get("name"),
+                webhook=webhook_id,
+            )
+            trace.step(llog.STEP_EVENT_RECEIVED, msg="operation=%s" % op)
+
             queue_model = self.env["shopify.order.queue"]
 
-            # Avoid creating multiple pending/processing queue records
+            existing_order = self.env["sale.order"]
             if shopify_order_id:
-                existing = queue_model.search(
-                    [
-                        ("store_id", "=", store.id),
-                        ("shopify_order_id", "=", str(shopify_order_id)),
-                        ("state", "in", ["pending", "processing"]),
-                    ],
-                    limit=1,
-                )
-                if existing:
-                    _logger.info(
-                        "Queue already exists (queue_id=%s) for order_id=%s",
-                        existing.id,
-                        shopify_order_id,
-                    )
-                    return True
-
-                # Also skip enqueue when order already imported (replay safety)
                 existing_order = self.env["sale.order"].search(
                     [
                         ("shopify_order_id", "=", str(shopify_order_id)),
@@ -303,22 +323,63 @@ class ShopifyWebhookHandler(models.AbstractModel):
                     ],
                     limit=1,
                 )
-                if existing_order:
-                    _logger.info(
-                        "Order already exists (so=%s) for shopify_order_id=%s — skip enqueue",
-                        existing_order.id,
-                        shopify_order_id,
+
+            if existing_order:
+                trace.bind(so=existing_order.name)
+                trace.step(
+                    llog.STEP_EXISTING_ORDER_FOUND,
+                    so=existing_order.name,
+                    msg="state=%s" % existing_order.state,
+                )
+                if op == llog.OP_CREATE:
+                    # Duplicate orders/create for an already-imported order.
+                    trace.step(
+                        llog.STEP_COMPLETED,
+                        so=existing_order.name,
+                        status="idempotent",
+                        msg="duplicate create ignored; order already imported",
+                    )
+                    return True
+                enqueue_op = llog.OP_UPDATE
+            else:
+                enqueue_op = (
+                    llog.OP_CREATE if op in (llog.OP_CREATE, llog.OP_UPDATE) else llog.OP_ORDER
+                )
+
+            # Avoid multiple pending/processing queue rows for the same order+op.
+            if shopify_order_id:
+                existing_queue = queue_model.search(
+                    [
+                        ("store_id", "=", store.id),
+                        ("shopify_order_id", "=", str(shopify_order_id)),
+                        ("job_type", "=", enqueue_op),
+                        ("state", "in", ["pending", "processing"]),
+                    ],
+                    limit=1,
+                )
+                if existing_queue:
+                    if not existing_queue.correlation_id:
+                        existing_queue.correlation_id = trace.correlation_id
+                    trace.step(
+                        llog.STEP_QUEUE_CREATED,
+                        queue=existing_queue.id,
+                        op=enqueue_op,
+                        status="dedup",
+                        msg="reused existing pending/processing queue",
                     )
                     return True
 
-            queue_model.create(
+            queue = queue_model.create(
                 {
                     "store_id": store.id,
                     "shopify_order_id": str(shopify_order_id) if shopify_order_id else False,
                     "payload": json.dumps(payload),
                     "state": "pending",
+                    "job_type": enqueue_op,
+                    "correlation_id": trace.correlation_id,
                 }
             )
+            trace.step(llog.STEP_QUEUE_CREATED, queue=queue.id, op=enqueue_op)
             return True
         except Exception as e:
             _logger.exception("process_webhook_order failed: %s", str(e))
