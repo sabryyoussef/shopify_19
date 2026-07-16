@@ -1,0 +1,15 @@
+{
+  "server": "izone",
+  "project_id": 12,
+  "parent_wp_id": 170,
+  "parent_subject": "izone_azone_parent",
+  "subject_prefix": "[iZone]",
+  "commit": {
+    "sha": "f0948ff244bad2740fe6402a5d51319a2eea9ca7",
+    "subject": "feat(P8+P2): structured lifecycle logging and existing-order update routing",
+    "author": "shopify-impl <impl@localhost>",
+    "branch": "--abbrev-ref HEAD",
+    "files": ".op-sync/queue/dbef3fe8110a192d7afb88179d1a5c0bbf32dbef.json\ncustom_odoo_shopify_connector/__manifest__.py\ncustom_odoo_shopify_connector/controllers/webhook_controller.py\ncustom_odoo_shopify_connector/models/order_queue.py\ncustom_odoo_shopify_connector/models/sync_log.py\ncustom_odoo_shopify_connector/models/webhook_handler.py\ncustom_odoo_shopify_connector/services/fulfillment_service.py\ncustom_odoo_shopify_connector/services/lifecycle_logger.py\ncustom_odoo_shopify_connector/services/order_import_service.py\ncustom_odoo_shopify_connector/services/order_update_service.py\ncustom_odoo_shopify_connector/tests/__init__.py\ncustom_odoo_shopify_connector/tests/test_p2_update_sync.py\ncustom_odoo_shopify_connector/tests/test_p8_logging.py",
+    "remote": "git@github.com:sabryyoussef/shopify_19.git"
+  }
+}

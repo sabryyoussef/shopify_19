@@ -1,10 +1,22 @@
 """P8 — Structured lifecycle logging tests."""
 import json
+import logging
 
 from odoo.tests import tagged
 from odoo.tests.common import TransactionCase
 
 from ..services import lifecycle_logger as llog
+
+
+class _CaptureHandler(logging.Handler):
+    """Collects formatted log lines emitted on a logger."""
+
+    def __init__(self):
+        super().__init__(level=logging.INFO)
+        self.lines = []
+
+    def emit(self, record):
+        self.lines.append(record.getMessage())
 
 
 @tagged("post_install", "-at_install", "shopify_p8")
@@ -100,7 +112,12 @@ class TestP8LifecycleLogging(TransactionCase):
     def test_05_end_to_end_greppable_trace(self):
         """One create event must be traceable end-to-end by a single corr id."""
         payload = self._payload(oid="p8-e2e", name="#P8-E2E")
-        with self.assertLogs("shopify.lifecycle", level="INFO") as captured:
+        logger = logging.getLogger("shopify.lifecycle")
+        handler = _CaptureHandler()
+        prev_level = logger.level
+        logger.addHandler(handler)
+        logger.setLevel(logging.INFO)
+        try:
             self.env["shopify.webhook.handler"].sudo().process_webhook_order(
                 payload,
                 self.store,
@@ -109,7 +126,11 @@ class TestP8LifecycleLogging(TransactionCase):
                 correlation_id="sh-e2e",
             )
             self.env["shopify.order.queue"].sudo().process_queue()
-        text = "\n".join(captured.output)
+        finally:
+            logger.removeHandler(handler)
+            logger.setLevel(prev_level)
+        text = "\n".join(handler.lines)
+        self.assertTrue(handler.lines, "lifecycle logger must emit records")
         # All key lifecycle steps present…
         for step in (
             llog.STEP_EVENT_RECEIVED,

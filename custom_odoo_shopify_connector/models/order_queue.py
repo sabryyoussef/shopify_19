@@ -305,8 +305,10 @@ class ShopifyOrderQueue(models.Model):
 
                     queue.write(
                         {
+                            # Keep a stable log_message for backward compatibility;
+                            # the operation-specific detail is on the Completed log.
                             "state": "done",
-                            "log_message": message or _("Processed successfully"),
+                            "log_message": _("Processed successfully"),
                             "retry_count": 0,
                             "error_message": False,
                             "last_error": False,

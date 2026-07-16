@@ -273,8 +273,9 @@ class TestP2UpdateSync(TransactionCase):
         # Existing order must be FOUND (update path), not create/skip.
         found = OrderUpdateService(self.env)._posted_invoices(order)
         posted_before = {inv.id: (inv.state, inv.amount_total) for inv in found}
+        commercial_partner = order.partner_id.commercial_partner_id
         payment_before = self.env["account.payment"].search_count(
-            [("partner_id", "=", order.commercial_partner_id.id)]
+            [("partner_id", "=", commercial_partner.id)]
         )
         so_count_before = self.env["sale.order"].search_count(
             [("shopify_order_id", "=", shopify_order_id)]
@@ -307,7 +308,7 @@ class TestP2UpdateSync(TransactionCase):
             self.assertEqual(inv.amount_total, posted_before[inv.id][1])
         # No payment registered by an update.
         payment_after = self.env["account.payment"].search_count(
-            [("partner_id", "=", order.commercial_partner_id.id)]
+            [("partner_id", "=", commercial_partner.id)]
         )
         self.assertEqual(payment_after, payment_before)
 
