@@ -85,6 +85,28 @@ class ShopifyFulfillmentService:
 
         return 0.0
 
+    def _ml_demand_qty(self, ml):
+        """Odoo 19 uses stock.move.line.quantity; older versions used product_uom_qty/qty_done."""
+        if "quantity" in ml._fields:
+            return float(ml.quantity or 0.0)
+        return float(getattr(ml, "product_uom_qty", 0.0) or 0.0)
+
+    def _ml_done_qty(self, ml):
+        if "picked" in ml._fields:
+            return float(ml.quantity or 0.0) if ml.picked else 0.0
+        return float(getattr(ml, "qty_done", 0.0) or 0.0)
+
+    def _ml_set_done(self, ml, qty):
+        vals = {}
+        if "quantity" in ml._fields:
+            vals["quantity"] = qty
+        if "picked" in ml._fields:
+            vals["picked"] = bool(qty)
+        if "qty_done" in ml._fields:
+            vals["qty_done"] = qty
+        if vals:
+            ml.write(vals)
+
     # ---------------------------
     # APPLY PARTIAL
     # ---------------------------
@@ -108,23 +130,22 @@ class ShopifyFulfillmentService:
                         if remaining <= 0:
                             break
 
-                        available = ml.product_uom_qty - ml.qty_done
+                        demand = self._ml_demand_qty(ml) or float(move.product_uom_qty or 0.0)
+                        done = self._ml_done_qty(ml)
+                        available = demand - done
+                        if available <= 0:
+                            # still allow setting from move demand when line quantity is empty
+                            available = float(move.product_uom_qty or 0.0) - done
                         if available <= 0:
                             continue
 
                         to_apply = min(available, remaining)
-
-                        # prevent over-delivery
-                        ml.qty_done = min(
-                            ml.product_uom_qty,
-                            ml.qty_done + to_apply
-                        )
-
+                        self._ml_set_done(ml, min(demand or (done + to_apply), done + to_apply))
                         remaining -= to_apply
 
         # validate only if something done
         for picking in pickings:
-            if any(ml.qty_done > 0 for ml in picking.move_line_ids):
+            if any(self._ml_done_qty(ml) > 0 for ml in picking.move_line_ids):
                 picking.button_validate()
 
     # ---------------------------
@@ -135,8 +156,11 @@ class ShopifyFulfillmentService:
 
         for picking in pickings:
             for ml in picking.move_line_ids:
-                if ml.product_uom_qty and not ml.qty_done:
-                    ml.qty_done = ml.product_uom_qty
+                demand = self._ml_demand_qty(ml)
+                if not demand and ml.move_id:
+                    demand = float(ml.move_id.product_uom_qty or 0.0)
+                if demand and not self._ml_done_qty(ml):
+                    self._ml_set_done(ml, demand)
             picking.button_validate()
 
     # ---------------------------

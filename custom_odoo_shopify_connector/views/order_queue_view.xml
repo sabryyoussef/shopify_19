@@ -59,6 +59,12 @@
                 <field name="store_id"/>
                 <field name="operation"/>
                 <field name="status"/>
+                <field name="webhook_id"/>
+                <field name="order_id"/>
+                <field name="error_type"/>
+                <separator/>
+                <filter name="filter_failed" string="Failed" domain="[('status','=','failed')]"/>
+                <filter name="filter_success" string="Success" domain="[('status','=','success')]"/>
                 <separator/>
                 <filter name="group_by_store" string="By Store" context="{'group_by': 'store_id'}"/>
                 <filter name="group_by_operation" string="By Operation" context="{'group_by': 'operation'}"/>
@@ -187,11 +193,15 @@
         <field name="model">shopify.sync.log</field>
         <field name="arch" type="xml">
             <list string="Shopify Sync Logs">
-                <field name="create_date" string="Created"/>
-                <field name="date"/>
+                <field name="timestamp" string="Created"/>
                 <field name="store_id"/>
                 <field name="operation"/>
+                <field name="webhook_id"/>
+                <field name="order_id" string="Shopify Order ID"/>
                 <field name="status"/>
+                <field name="attempt"/>
+                <field name="last_attempt_at"/>
+                <field name="error_type"/>
                 <field name="message"/>
             </list>
         </field>
@@ -202,16 +212,37 @@
         <field name="model">shopify.sync.log</field>
         <field name="arch" type="xml">
             <form string="Shopify Sync Log">
+                <header>
+                    <button name="action_retry"
+                            type="object"
+                            string="Retry"
+                            class="btn-primary"
+                            invisible="status != 'failed' or (not webhook_id and not queue_id)"
+                            confirm="Retry this failed sync via the related webhook/queue?"/>
+                    <field name="status" widget="statusbar"/>
+                </header>
                 <sheet>
                     <group>
-                        <field name="create_date" string="Created"/>
-                        <field name="date"/>
-                        <field name="store_id"/>
-                        <field name="operation"/>
-                        <field name="status"/>
+                        <group string="Context">
+                            <field name="store_id"/>
+                            <field name="operation"/>
+                            <field name="webhook_id"/>
+                            <field name="order_id" string="Shopify Order ID"/>
+                            <field name="shopify_id"/>
+                            <field name="queue_id"/>
+                        </group>
+                        <group string="Attempts">
+                            <field name="timestamp"/>
+                            <field name="attempt"/>
+                            <field name="last_attempt_at"/>
+                            <field name="duration_ms"/>
+                            <field name="error_type"/>
+                            <field name="status"/>
+                        </group>
                     </group>
                     <group>
                         <field name="message"/>
+                        <field name="error_message"/>
                         <field name="payload"/>
                         <field name="response"/>
                     </group>

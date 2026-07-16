@@ -68,7 +68,7 @@ class TestSyncReliability(TransactionCase):
             ],
         }
         self.customer_sync._import_customer_payload(self.store, payload)
-        partner.invalidate_cache(["street", "city", "zip"])
+        partner.invalidate_recordset(["street", "city", "zip"])
 
         self.assertEqual(partner.street, "Old Street")
         self.assertEqual(partner.city, "Old City")

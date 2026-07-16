@@ -1,0 +1,15 @@
+{
+  "server": "izone",
+  "project_id": 12,
+  "parent_wp_id": 170,
+  "parent_subject": "izone_azone_parent",
+  "subject_prefix": "[iZone]",
+  "commit": {
+    "sha": "60bf39399bdd0d11426e47d027afe4c8d0822274",
+    "subject": "docs: add Arabic user guide for phases 1 and 2 delivery.",
+    "author": "OP Sync <op-sync@edafa.local>",
+    "branch": "--abbrev-ref HEAD",
+    "files": "custom_odoo_shopify_connector/docs/user-guide/PHASE_1_2_USER_GUIDE_AR.txt",
+    "remote": "git@github.com:sabryyoussef/shopify_19.git"
+  }
+}

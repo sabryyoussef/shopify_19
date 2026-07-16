@@ -55,6 +55,7 @@ Features:
         "views/shopify_settings_views.xml",
         "views/trial_popup_views.xml",
         "views/order_queue_view.xml",
+        "views/shopify_webhook_event_views.xml",
         "views/shopify_queue_view.xml",
         "views/product_queue_view.xml",
         "views/shopify_product_sync_check_view.xml",

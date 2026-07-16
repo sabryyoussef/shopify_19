@@ -1,0 +1,15 @@
+{
+  "server": "izone",
+  "project_id": 12,
+  "parent_wp_id": 170,
+  "parent_subject": "izone_azone_parent",
+  "subject_prefix": "[iZone]",
+  "commit": {
+    "sha": "b2d1823ab4a6c6be0555c5db13d858bb906fa2d2",
+    "subject": "feat: WP69 payment fees, refunds, exchange, and ops (Phases A-E)",
+    "author": "Odoo Deploy <odoo@worldposta-azone>",
+    "branch": "--abbrev-ref HEAD",
+    "files": "custom_odoo_shopify_connector/__manifest__.py\ncustom_odoo_shopify_connector/controllers/shopify_webhook.py\ncustom_odoo_shopify_connector/docs/wp69/IMPLEMENTATION_REPORT.md\ncustom_odoo_shopify_connector/models/__init__.py\ncustom_odoo_shopify_connector/models/account_move.py\ncustom_odoo_shopify_connector/models/sale_order.py\ncustom_odoo_shopify_connector/models/sale_order_line.py\ncustom_odoo_shopify_connector/models/shopify_exchange_wizard.py\ncustom_odoo_shopify_connector/models/shopify_financial_status.py\ncustom_odoo_shopify_connector/models/shopify_payment_gateway.py\ncustom_odoo_shopify_connector/models/shopify_service.py\ncustom_odoo_shopify_connector/models/shopify_store.py\ncustom_odoo_shopify_connector/security/ir.model.access.csv\ncustom_odoo_shopify_connector/services/__init__.py\ncustom_odoo_shopify_connector/services/fulfillment_service.py\ncustom_odoo_shopify_connector/services/order_import_service.py\ncustom_odoo_shopify_connector/services/order_service.py\ncustom_odoo_shopify_connector/services/payment_fee_service.py\ncustom_odoo_shopify_connector/services/refund_sync_service.py\ncustom_odoo_shopify_connector/tests/__init__.py\ncustom_odoo_shopify_connector/tests/test_payment_fee_service.py\ncustom_odoo_shopify_connector/views/payment_gateway_views.xml\ncustom_odoo_shopify_connector/views/sale_order_view.xml\ncustom_odoo_shopify_connector/views/shopify_exchange_wizard.xml\ncustom_odoo_shopify_connector/views/shopify_store_view.xml",
+    "remote": "git@github.com:sabryyoussef/shopify_19.git"
+  }
+}

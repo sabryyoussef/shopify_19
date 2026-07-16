@@ -101,22 +101,10 @@ class ShopifyCancellationWebhookController(http.Controller):
         try:
             from ..services.refund_sync_service import RefundSyncService
 
-            RefundSyncService(request.env).sync_cancel_reversal(store, order, cancel_reason)
+            RefundSyncService(request.env).cancel_order_from_shopify(store, order, cancel_reason)
         except Exception as exc:
             handler.mark_webhook_event_status(event, "failed", str(exc))
             raise
-
-        try:
-            order.action_cancel()
-        except Exception:
-            order.write({"state": "cancel"})
-
-        order.write(
-            {
-                "shopify_cancelled": True,
-                "shopify_cancel_reason": cancel_reason or "shopify",
-            }
-        )
 
         request.env["shopify.sync.log.mixin"].create_log(
             store=store,

@@ -55,6 +55,26 @@ class ShopifyPaymentGateway(models.Model):
         string="Fee Base",
         default="subtotal",
     )
+    # Future accounting options (default keeps current SO fee product / invoice discount behavior).
+    fee_recording_mode = fields.Selection(
+        [
+            ("current", "Current (fee product / invoice discount)"),
+            ("expense_split", "Expense split (payment + fee expense + bank net) — not yet active"),
+        ],
+        string="Fee Recording Mode",
+        default="current",
+        help="Reserved for accounting change. Default 'current' preserves existing behavior.",
+    )
+    fee_account_id = fields.Many2one(
+        "account.account",
+        string="Fee Expense Account",
+        help="Optional expense account for Paymob/gateway fees when expense_split is adopted.",
+    )
+    fee_tax_id = fields.Many2one(
+        "account.tax",
+        string="Fee Tax",
+        help="Optional tax applied on gateway fees when expense_split accounting is adopted.",
+    )
 
     payment_code = fields.Char(
         string="Payment Code",
