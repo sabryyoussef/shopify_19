@@ -65,6 +65,8 @@ class OrderService:
                 pass
         fulfillment_status = payload.get("fulfillment_status") or "unfulfilled"
         order_vals["shopify_fulfillment_status"] = fulfillment_status
+        if payload.get("updated_at"):
+            order_vals["shopify_updated_at"] = str(payload.get("updated_at"))
         shopify_user_id = self._resolve_shopify_user_id(store)
         if shopify_user_id:
             order_vals["user_id"] = shopify_user_id

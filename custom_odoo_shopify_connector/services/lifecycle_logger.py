@@ -53,6 +53,16 @@ STEP_COMPLETED = "Completed"
 STEP_FAILURE = "Failure"
 STEP_RETRY_SCHEDULED = "RetryScheduled"
 STEP_SKIPPED = "Skipped"
+# P3 — polling / reconciliation fallback
+STEP_POLLING_STARTED = "PollingStarted"
+STEP_POLLING_PAGE_FETCHED = "PollingPageFetched"
+STEP_POLLING_CREATE_DETECTED = "PollingCreateDetected"
+STEP_POLLING_UPDATE_DETECTED = "PollingUpdateDetected"
+STEP_POLLING_FULFILLMENT_DETECTED = "PollingFulfillmentDetected"
+STEP_POLLING_SKIPPED_NO_CHANGE = "PollingSkippedNoChange"
+STEP_POLLING_QUEUE_DEDUP = "PollingQueueDedup"
+STEP_POLLING_CHECKPOINT_ADVANCED = "PollingCheckpointAdvanced"
+STEP_POLLING_FAILED = "PollingFailed"
 
 # ---------------------------------------------------------------------------
 # Operation types (lifecycle events must be distinguished, not generic import)

@@ -75,6 +75,9 @@
                                     <field name="order_import_salesperson_id"/>
                                     <field name="import_order_status"/>
                                     <field name="order_import_start_date"/>
+                                    <field name="poll_overlap_minutes"/>
+                                    <field name="last_order_import_time" readonly="1"/>
+                                    <field name="last_order_update_time" readonly="1"/>
                                     <field name="delivery_product_id"/>
                                     <field name="payment_fee_product_id"/>
                                     <field name="refund_sync_mode"/>
