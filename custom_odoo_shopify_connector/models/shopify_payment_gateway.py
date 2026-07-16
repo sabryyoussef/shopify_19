@@ -9,6 +9,24 @@ class ShopifyPaymentGateway(models.Model):
     name = fields.Char(required=True)
     shopify_id = fields.Char(string="Shopify Gateway ID", index=True)
 
+    gateway_type = fields.Selection(
+        [
+            ("online", "Online / Prepaid (Paymob, card, wallet)"),
+            ("cod", "Cash on Delivery"),
+            ("bank", "Bank Transfer / InstaPay"),
+            ("manual", "Manual / Other"),
+            ("unknown", "Unknown"),
+        ],
+        string="Gateway Type",
+        default="unknown",
+        help=(
+            "Financial category driving invoice/payment decisioning. "
+            "Online = prepaid orders may be invoiced and paid once a successful "
+            "transaction exists. COD = confirm only; invoice on delivery, payment "
+            "on confirmed collection. Bank = InstaPay/bank transfer prepaid."
+        ),
+    )
+
     instance_id = fields.Many2one(
         "shopify.store",
         string="Shopify Store",

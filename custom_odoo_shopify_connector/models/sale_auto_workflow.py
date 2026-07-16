@@ -28,6 +28,29 @@ class ShopifySaleAutoWorkflow(models.Model):
         help="If enabled, the invoice accounting date will be forced to match the order date.",
     )
 
+    invoice_timing = fields.Selection(
+        [
+            ("immediate", "Immediate (on import / payment)"),
+            ("on_delivery", "On Completed Delivery"),
+        ],
+        string="Invoice Timing",
+        default="immediate",
+        help=(
+            "When invoices should be created/posted. COD workflows should use "
+            "'On Completed Delivery' so an invoice is not posted merely because "
+            "the order was created."
+        ),
+    )
+    require_payment_evidence = fields.Boolean(
+        string="Require Payment Evidence",
+        default=True,
+        help=(
+            "When enabled (recommended), a payment is only registered when there "
+            "is a successful Shopify transaction (or confirmed COD collection). "
+            "Never register a payment just because an order or invoice exists."
+        ),
+    )
+
     payment_journal_id = fields.Many2one(
         "account.journal",
         string="Payment Journal",
