@@ -33,6 +33,28 @@ class SaleOrder(models.Model):
         index=True,
         help="True when this order's fulfillment/tracking has been successfully pushed to Shopify.",
     )
+    shopify_fulfillment_mapping_failed = fields.Boolean(
+        string="Fulfillment Mapping Failed",
+        default=False,
+        index=True,
+        copy=False,
+        help="A Shopify fulfillment line could not be safely mapped to an Odoo "
+        "stock move. Flagged for manual review; no stock was delivered.",
+    )
+    shopify_fulfillment_reversal_flagged = fields.Boolean(
+        string="Fulfillment Reversal Flagged",
+        default=False,
+        index=True,
+        copy=False,
+        help="A Shopify fulfillment was cancelled/reversed after the Odoo picking "
+        "was already done. Flagged for controlled return/reversal; the completed "
+        "picking is never auto-reverted.",
+    )
+    shopify_fulfillment_note = fields.Char(
+        string="Fulfillment Review Note",
+        copy=False,
+        help="Human-readable note explaining a flagged fulfillment mapping/reversal case.",
+    )
 
     def _compute_shopify_fulfilled(self):
         for order in self:

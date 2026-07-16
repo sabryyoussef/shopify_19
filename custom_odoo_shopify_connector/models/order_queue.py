@@ -159,6 +159,87 @@ class ShopifyOrderQueue(models.Model):
         self.ensure_one()
         return self.job_type or llog.OP_ORDER
 
+    @staticmethod
+    def _normalize_fulfillment_payload(payload):
+        """Normalize either webhook payload shape into the order-shaped payload
+        the fulfillment service expects.
+
+        - ``orders/fulfilled`` / ``orders/partially_fulfilled``: order object
+          already carrying ``fulfillments`` + ``fulfillment_status``.
+        - ``fulfillments/create`` / ``fulfillments/update``: a single Fulfillment
+          object with ``order_id`` and ``line_items`` -> wrapped into an order
+          shape keyed by the order id.
+        """
+        payload = payload or {}
+        if payload.get("fulfillments") is not None or "fulfillment_status" in payload:
+            return payload
+        if payload.get("line_items") is not None and (
+            payload.get("order_id") or payload.get("id")
+        ):
+            order_id = payload.get("order_id") or payload.get("id")
+            status = (payload.get("status") or "").strip().lower()
+            fulfillment_status = "fulfilled" if status == "success" else "partial"
+            return {
+                "id": order_id,
+                "fulfillments": [payload],
+                "fulfillment_status": fulfillment_status,
+            }
+        return payload
+
+    def _dispatch_fulfillment(
+        self, queue, payload, trace, import_service, order_service, fulfillment_service
+    ):
+        """Route a FULFILLMENT queue item to the fulfillment service.
+
+        Never runs the CREATE workflow. If the order was never imported (webhook
+        out of order) the fulfillment is deferred safely rather than guessing.
+        """
+        store = queue.store_id
+        norm = self._normalize_fulfillment_payload(payload)
+        trace.op = llog.OP_FULFILLMENT
+
+        order = order_service._find_existing_order(norm, store)
+        if not order:
+            # Out-of-order fulfillment for an order we have not imported yet.
+            # Defer safely (state=done, no retry storm); a later orders/* event
+            # will import it, and Shopify will re-send/allow replay.
+            trace.step(
+                llog.STEP_FULFILLMENT_MAPPING_FAILED,
+                status="warn",
+                level=30,
+                msg="fulfillment for unknown order %s; deferred (not imported yet)"
+                % (norm.get("id") or queue.shopify_order_id),
+            )
+            return (False, _("Fulfillment for not-yet-imported order deferred."))
+
+        trace.bind(so=order.name)
+        result = fulfillment_service.handle_fulfillment(
+            order, store, norm, correlation_id=queue.correlation_id, trace=trace
+        )
+
+        if result.get("mapping_failed"):
+            # Fail safely: no stock delivered, order flagged for manual review.
+            return (
+                False,
+                _("Fulfillment mapping failed for %s; flagged for manual review.")
+                % order.name,
+            )
+        if result.get("reversal"):
+            return (
+                False,
+                _("Fulfillment reversal detected for %s; flagged (no auto-revert).")
+                % order.name,
+            )
+
+        # COD invoice-on-delivery: only fires for on_delivery workflows once the
+        # picking is done. Never registers payment without collection evidence.
+        if result.get("delivery_completed"):
+            import_service.trigger_invoice_on_delivery(
+                order, store, correlation_id=queue.correlation_id
+            )
+
+        return (True, _("Fulfillment applied to order %s.") % order.name)
+
     def _dispatch_queue(
         self,
         queue,
@@ -177,9 +258,16 @@ class ShopifyOrderQueue(models.Model):
         store = queue.store_id
         op = queue._normalized_operation()
 
-        # Operations reserved for later phases (fulfillment/payment/refund/
-        # cancellation) are recognised so the queue is extensible, but they are
-        # not driven from here in this phase.
+        # P4 — fulfillment events run a dedicated handler (not the CREATE/UPDATE
+        # workflow), so no duplicate sale orders / invoices / payments / pickings.
+        if op == llog.OP_FULFILLMENT:
+            return self._dispatch_fulfillment(
+                queue, payload, trace, import_service, order_service, fulfillment_service
+            )
+
+        # Operations reserved for later phases (payment/refund/cancellation) are
+        # recognised so the queue is extensible, but they are not driven from
+        # here in this phase.
         if op not in _ORDER_LIFECYCLE_OPS:
             return (
                 False,

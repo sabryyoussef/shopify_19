@@ -314,6 +314,27 @@ class ShopifyWebhookHandler(models.AbstractModel):
 
             queue_model = self.env["shopify.order.queue"]
 
+            # P4 — fulfillment events route to the dedicated fulfillment handler.
+            # No create/update dedup collapse: multiple shipments for one order
+            # produce distinct queue rows, each made idempotent downstream by the
+            # Shopify fulfillment id.
+            if op == llog.OP_FULFILLMENT:
+                order_ref = payload.get("order_id") or shopify_order_id
+                queue = queue_model.create(
+                    {
+                        "store_id": store.id,
+                        "shopify_order_id": str(order_ref) if order_ref else False,
+                        "payload": json.dumps(payload),
+                        "state": "pending",
+                        "job_type": llog.OP_FULFILLMENT,
+                        "correlation_id": trace.correlation_id,
+                    }
+                )
+                trace.step(
+                    llog.STEP_QUEUE_CREATED, queue=queue.id, op=llog.OP_FULFILLMENT
+                )
+                return True
+
             existing_order = self.env["sale.order"]
             if shopify_order_id:
                 existing_order = self.env["sale.order"].search(
