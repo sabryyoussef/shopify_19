@@ -283,6 +283,38 @@ class ShopifyStore(models.Model):
         string="Manage Orders via Webhook",
         help="If enabled, Shopify order webhooks will be used to import and update orders.",
     )
+    webhook_base_url = fields.Char(
+        string="Webhook Callback Base URL",
+        help="Public HTTPS base URL Shopify should deliver webhooks to (e.g. "
+        "https://erp.example.com). If empty, the system 'web.base.url' is used. "
+        "Registration requires an https URL and a configured webhook secret.",
+    )
+
+    def action_shopify_webhook_plan(self):
+        """Read-only: return the desired-vs-registered webhook plan (no writes)."""
+        from ..services.webhook_registration_service import ShopifyWebhookRegistrationService
+
+        service = ShopifyWebhookRegistrationService(self.env)
+        reports = {}
+        for store in self:
+            reports[store.id] = service.plan(store)
+            _logger.info("Shopify webhook plan store=%s: %s", store.id, reports[store.id])
+        return reports
+
+    def action_shopify_webhook_register(self):
+        """Controlled live registration/repair of missing/incorrect webhooks.
+
+        Only writes to Shopify for the Test/UAT target; requires https callback +
+        configured webhook secret. Never registers Production automatically.
+        """
+        from ..services.webhook_registration_service import ShopifyWebhookRegistrationService
+
+        service = ShopifyWebhookRegistrationService(self.env)
+        reports = {}
+        for store in self:
+            reports[store.id] = service.reconcile(store, dry_run=False)
+            _logger.info("Shopify webhook register store=%s: %s", store.id, reports[store.id])
+        return reports
 
     # Update Order Shipping Status (Odoo → Shopify) scheduler
     update_shipping_sync_enabled = fields.Boolean(

@@ -453,6 +453,37 @@ class ShopifyAPI:
         path = f"/customers/{customer_id}.json"
         return self._request("GET", path)
 
+    # =========================================================
+    # WEBHOOKS (registration / reconciliation)
+    # =========================================================
+    def get_webhooks(self, **params):
+        """List webhook subscriptions registered on the store."""
+        params.setdefault("limit", 250)
+        res = self._request("GET", "/webhooks.json", params=params)
+        return res.get("webhooks", [])
+
+    def create_webhook(self, topic, address, fmt="json"):
+        """Register a webhook subscription for a topic -> callback address."""
+        res = self._request(
+            "POST",
+            "/webhooks.json",
+            data={"webhook": {"topic": topic, "address": address, "format": fmt}},
+        )
+        return res.get("webhook")
+
+    def update_webhook(self, webhook_id, address, fmt="json"):
+        """Update an existing webhook subscription's callback address."""
+        res = self._request(
+            "PUT",
+            f"/webhooks/{webhook_id}.json",
+            data={"webhook": {"id": int(webhook_id), "address": address, "format": fmt}},
+        )
+        return res.get("webhook")
+
+    def delete_webhook(self, webhook_id):
+        """Delete a webhook subscription."""
+        return self._request("DELETE", f"/webhooks/{webhook_id}.json")
+
     def create_product(self, product_payload, location_id=None):
         res = self._request(
             "POST",
