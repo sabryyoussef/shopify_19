@@ -1,7 +1,57 @@
 import json
 
-from odoo import _, fields, http
+from odoo import http
 from odoo.http import request
+
+
+def _ingest(default_topic):
+    """Shared thin-delegator body for cancellation/refund webhook endpoints.
+
+    All receive/HMAC/idempotency/routing logic lives in the shared handler
+    (shopify.webhook.handler.ingest_webhook); controllers hold no business logic.
+    """
+    req = request.httprequest
+    raw_data = req.get_data()
+    shop_domain = req.headers.get("X-Shopify-Shop-Domain")
+    hmac_header = req.headers.get("X-Shopify-Hmac-Sha256")
+    webhook_id = req.headers.get("X-Shopify-Webhook-Id")
+    topic = req.headers.get("X-Shopify-Topic") or default_topic
+    handler = request.env["shopify.webhook.handler"].sudo()
+
+    store = handler.get_store_for_webhook(shop_domain)
+    if not store:
+        request.env["shopify.sync.log.mixin"].create_log(
+            store=False,
+            log_type="order",
+            message="Shopify %s webhook: unknown store %s" % (default_topic, shop_domain or ""),
+            payload=raw_data.decode("utf-8", errors="ignore"),
+            status="failed",
+        )
+        return request.make_response("Unknown store", status=404)
+
+    try:
+        result = handler.ingest_webhook(
+            store=store,
+            raw_data=raw_data,
+            hmac_header=hmac_header,
+            webhook_id=webhook_id,
+            topic=topic,
+            shop_domain=shop_domain,
+        )
+    except Exception:
+        return request.make_response(
+            json.dumps({"success": False, "error": "processing_error"}),
+            status=500,
+            headers=[("Content-Type", "application/json")],
+        )
+
+    if not result.get("ok"):
+        return request.make_response(result.get("reason") or "rejected", status=result.get("code", 403))
+    return request.make_response(
+        json.dumps({"success": True, "duplicate": bool(result.get("duplicate"))}),
+        status=result.get("code", 200),
+        headers=[("Content-Type", "application/json")],
+    )
 
 
 class ShopifyCancellationWebhookController(http.Controller):
@@ -13,111 +63,7 @@ class ShopifyCancellationWebhookController(http.Controller):
         csrf=False,
     )
     def shopify_order_cancelled_webhook(self, **kwargs):
-        raw_data = request.httprequest.get_data()
-        shop_domain = request.httprequest.headers.get("X-Shopify-Shop-Domain")
-        hmac_header = request.httprequest.headers.get("X-Shopify-Hmac-Sha256")
-        webhook_id = request.httprequest.headers.get("X-Shopify-Webhook-Id")
-        topic = request.httprequest.headers.get("X-Shopify-Topic") or "orders/cancelled"
-        handler = request.env["shopify.webhook.handler"].sudo()
-
-        try:
-            payload = json.loads(raw_data.decode("utf-8") or "{}")
-        except Exception:
-            request.env["shopify.sync.log.mixin"].create_log(
-                store=False,
-                log_type="order",
-                message="Shopify orders/cancelled webhook: invalid JSON payload.",
-                payload=raw_data.decode("utf-8", errors="ignore"),
-                status="failed",
-            )
-            return request.make_response("Invalid JSON", status=400)
-
-        store = handler.get_store_for_webhook(shop_domain)
-        if not store:
-            request.env["shopify.sync.log.mixin"].create_log(
-                store=False,
-                log_type="order",
-                message="Shopify orders/cancelled webhook: unknown store %s" % (shop_domain or ""),
-                payload=raw_data.decode("utf-8", errors="ignore"),
-                status="failed",
-            )
-            return request.make_response("Unknown store", status=404)
-
-        valid, reason = handler.validate_webhook_request(store, raw_data, hmac_header, webhook_id)
-        if not valid:
-            request.env["shopify.sync.log.mixin"].create_log(
-                store=store,
-                log_type="order",
-                message="Shopify orders/cancelled webhook rejected: %s." % reason,
-                payload=raw_data.decode("utf-8", errors="ignore"),
-                status="failed",
-                response=json.dumps({"topic": topic, "webhook_id": webhook_id}),
-            )
-            status_code = 400 if "delivery id" in reason else 403
-            return request.make_response(reason, status=status_code)
-
-        event = handler.register_webhook_delivery(
-            store=store,
-            webhook_id=webhook_id,
-            topic=topic,
-            shop_domain=shop_domain,
-            raw_payload=raw_data.decode("utf-8", errors="ignore")[:100000],
-        )
-        if webhook_id and not event:
-            return request.make_response(json.dumps({"success": True, "duplicate": True}), status=200)
-
-        shopify_order_id = str(payload.get("id") or payload.get("order_id") or "")
-        cancel_reason = payload.get("cancel_reason") or payload.get("reason") or ""
-
-        request.env["shopify.sync.log.mixin"].create_log(
-            store=store,
-            log_type="order",
-            message="Shopify webhook received: orders/cancelled",
-            payload=raw_data.decode("utf-8", errors="ignore")[:5000],
-            status="success",
-            order_id=shopify_order_id or False,
-        )
-
-        if not shopify_order_id:
-            handler.mark_webhook_event_status(event, "processed")
-            return request.make_response(json.dumps({"success": True}), status=200)
-
-        SaleOrder = request.env["sale.order"].sudo()
-        order = SaleOrder.search(
-            [
-                ("shopify_order_id", "=", shopify_order_id),
-                ("shopify_instance_id", "=", store.id),
-            ],
-            limit=1,
-        )
-        if not order:
-            handler.mark_webhook_event_status(event, "processed")
-            return request.make_response(json.dumps({"success": True}), status=200)
-
-        if order.state == "cancel" or order.shopify_cancelled:
-            handler.mark_webhook_event_status(event, "processed")
-            return request.make_response(json.dumps({"success": True}), status=200)
-
-        try:
-            from ..services.refund_sync_service import RefundSyncService
-
-            RefundSyncService(request.env).cancel_order_from_shopify(store, order, cancel_reason)
-        except Exception as exc:
-            handler.mark_webhook_event_status(event, "failed", str(exc))
-            raise
-
-        request.env["shopify.sync.log.mixin"].create_log(
-            store=store,
-            log_type="order",
-            message="Odoo sale order cancelled from Shopify webhook.",
-            payload=json.dumps({"odoo_order": order.name}),
-            status="success",
-            order_id=shopify_order_id,
-        )
-
-        handler.mark_webhook_event_status(event, "processed")
-
-        return request.make_response(json.dumps({"success": True}), status=200)
+        return _ingest("orders/cancelled")
 
 
 class ShopifyRefundWebhookController(http.Controller):
@@ -129,114 +75,4 @@ class ShopifyRefundWebhookController(http.Controller):
         csrf=False,
     )
     def shopify_refund_created_webhook(self, **kwargs):
-        raw_data = request.httprequest.get_data()
-        shop_domain = request.httprequest.headers.get("X-Shopify-Shop-Domain")
-        hmac_header = request.httprequest.headers.get("X-Shopify-Hmac-Sha256")
-        webhook_id = request.httprequest.headers.get("X-Shopify-Webhook-Id")
-        topic = request.httprequest.headers.get("X-Shopify-Topic") or "refunds/create"
-        handler = request.env["shopify.webhook.handler"].sudo()
-
-        try:
-            payload = json.loads(raw_data.decode("utf-8") or "{}")
-        except Exception:
-            request.env["shopify.sync.log.mixin"].create_log(
-                store=False,
-                log_type="order",
-                message="Shopify refunds/create webhook: invalid JSON payload.",
-                payload=raw_data.decode("utf-8", errors="ignore"),
-                status="failed",
-            )
-            return request.make_response("Invalid JSON", status=400)
-
-        store = handler.get_store_for_webhook(shop_domain)
-        if not store:
-            request.env["shopify.sync.log.mixin"].create_log(
-                store=False,
-                log_type="order",
-                message="Shopify refunds/create webhook: unknown store %s" % (shop_domain or ""),
-                payload=raw_data.decode("utf-8", errors="ignore"),
-                status="failed",
-            )
-            return request.make_response("Unknown store", status=404)
-
-        valid, reason = handler.validate_webhook_request(store, raw_data, hmac_header, webhook_id)
-        if not valid:
-            request.env["shopify.sync.log.mixin"].create_log(
-                store=store,
-                log_type="order",
-                message="Shopify refunds/create webhook rejected: %s." % reason,
-                payload=raw_data.decode("utf-8", errors="ignore"),
-                status="failed",
-                response=json.dumps({"topic": topic, "webhook_id": webhook_id}),
-            )
-            status_code = 400 if "delivery id" in reason else 403
-            return request.make_response(reason, status=status_code)
-
-        event = handler.register_webhook_delivery(
-            store=store,
-            webhook_id=webhook_id,
-            topic=topic,
-            shop_domain=shop_domain,
-            raw_payload=raw_data.decode("utf-8", errors="ignore")[:100000],
-        )
-        if webhook_id and not event:
-            return request.make_response(json.dumps({"success": True, "duplicate": True}), status=200)
-
-        shopify_order_id = str(payload.get("order_id") or payload.get("order", {}).get("id") or "")
-        refund_id = str(payload.get("id") or "")
-
-        request.env["shopify.sync.log.mixin"].create_log(
-            store=store,
-            log_type="order",
-            message="Shopify webhook received: refunds/create",
-            payload=raw_data.decode("utf-8", errors="ignore")[:5000],
-            status="success",
-            order_id=shopify_order_id or False,
-        )
-
-        if not shopify_order_id:
-            handler.mark_webhook_event_status(event, "processed")
-            return request.make_response(json.dumps({"success": True}), status=200)
-
-        SaleOrder = request.env["sale.order"].sudo()
-        order = SaleOrder.search(
-            [
-                ("shopify_order_id", "=", shopify_order_id),
-                ("shopify_instance_id", "=", store.id),
-            ],
-            limit=1,
-        )
-        if not order:
-            handler.mark_webhook_event_status(event, "processed")
-            return request.make_response(json.dumps({"success": True}), status=200)
-
-        # Duplicate refund protection by Shopify refund id
-        Move = request.env["account.move"].sudo()
-        if refund_id and Move.search_count([("shopify_refund_id", "=", refund_id)]):
-            handler.mark_webhook_event_status(event, "processed")
-            return request.make_response(json.dumps({"success": True}), status=200)
-
-        # Find a posted invoice to reverse
-        invoice = Move.search(
-            [
-                ("move_type", "=", "out_invoice"),
-                ("state", "=", "posted"),
-                ("invoice_origin", "=", order.name),
-            ],
-            limit=1,
-        )
-        if not invoice:
-            handler.mark_webhook_event_status(event, "processed")
-            return request.make_response(json.dumps({"success": True}), status=200)
-
-        try:
-            from ..services.refund_sync_service import RefundSyncService
-
-            RefundSyncService(request.env).sync_refund_from_webhook(store, order, payload)
-        except Exception as exc:
-            handler.mark_webhook_event_status(event, "failed", str(exc))
-            raise
-
-        handler.mark_webhook_event_status(event, "processed")
-
-        return request.make_response(json.dumps({"success": True}), status=200)
+        return _ingest("refunds/create")

@@ -216,60 +216,164 @@ class ShopifyWebhookHandler(models.AbstractModel):
         replay_operation = llog.operation_from_topic(topic)
         replay_corr = "replay-%s" % (event.webhook_id or event.id)
         try:
-            if topic.startswith("orders/") or topic in ("", "order", "orders/create", "orders/updated"):
-                self.process_webhook_order(
-                    payload,
-                    store,
-                    shop_domain=event.shop_domain,
-                    is_valid_hmac=True,
-                    operation=replay_operation,
-                    webhook_id=event.webhook_id,
-                    correlation_id=replay_corr,
-                )
-            elif "refund" in topic:
-                # Delegate to existing refund webhook path via service (no controller logic)
-                order = self.env["sale.order"].sudo().search(
-                    [
-                        ("shopify_order_id", "=", str(order_id)),
-                        ("shopify_instance_id", "=", store.id),
-                    ],
-                    limit=1,
-                )
-                from ..services.refund_sync_service import RefundSyncService
-
-                if order:
-                    RefundSyncService(self.env).sync_refund_from_webhook(store, order, payload)
-            elif "cancel" in topic:
-                order = self.env["sale.order"].sudo().search(
-                    [
-                        ("shopify_order_id", "=", str(order_id)),
-                        ("shopify_instance_id", "=", store.id),
-                    ],
-                    limit=1,
-                )
-                from ..services.refund_sync_service import RefundSyncService
-
-                if order:
-                    RefundSyncService(self.env).cancel_order_from_shopify(
-                        store, order, payload.get("cancel_reason")
-                    )
-            else:
-                # Generic: re-queue order processing if order id is present
-                self.process_webhook_order(
-                    payload,
-                    store,
-                    shop_domain=event.shop_domain,
-                    is_valid_hmac=True,
-                    operation=replay_operation,
-                    webhook_id=event.webhook_id,
-                    correlation_id=replay_corr,
-                )
+            # Single source of routing truth: same operation-aware router as live
+            # ingestion. Replay is thus idempotent (dedup guards downstream).
+            self._route_operation(
+                store,
+                replay_operation,
+                payload,
+                event.shop_domain,
+                event.webhook_id,
+                replay_corr,
+            )
             self.mark_webhook_event_status(event, "processed")
             return True
         except Exception as exc:
             _logger.exception("Webhook replay failed for webhook_id=%s", event.webhook_id)
             self.mark_webhook_event_status(event, "failed", str(exc))
             return False
+
+    @api.model
+    def ingest_webhook(
+        self,
+        store,
+        raw_data,
+        hmac_header,
+        webhook_id,
+        topic,
+        shop_domain,
+        correlation_id=None,
+    ):
+        """Single, operation-aware webhook entry point (P1).
+
+        Order of guarantees: receive -> HMAC (raw body) -> idempotent register ->
+        route by operation. Controllers stay thin and both HTTP and tests use
+        this method, so no business logic lives in the controllers. Emits P8
+        structured steps and never logs the secret.
+
+        Returns a dict: {ok, code, operation, duplicate?, reason?}.
+        """
+        op = llog.operation_from_topic(topic)
+        corr = correlation_id or (("wh-%s" % webhook_id) if webhook_id else llog.new_correlation_id())
+        trace = llog.LifecycleTrace(correlation_id=corr, op=op, webhook=webhook_id)
+        trace.step(llog.STEP_WEBHOOK_RECEIVED, msg="topic=%s" % (topic or ""))
+
+        valid, reason = self.validate_webhook_request(store, raw_data, hmac_header, webhook_id)
+        if not valid:
+            trace.step(
+                llog.STEP_HMAC_FAILED,
+                status="rejected",
+                level=logging.WARNING,
+                msg=reason,
+            )
+            code = 400 if "delivery id" in (reason or "") else 403
+            return {"ok": False, "code": code, "reason": reason}
+        trace.step(llog.STEP_HMAC_VALIDATED, status="ok")
+
+        raw_text = raw_data.decode("utf-8", errors="ignore") if isinstance(raw_data, bytes) else str(raw_data)
+        try:
+            payload = json.loads(raw_text or "{}")
+        except Exception:
+            return {"ok": False, "code": 400, "reason": "Invalid JSON"}
+
+        shopify_order_id = str(payload.get("id") or payload.get("order_id") or "")
+        trace.bind(shop_order=shopify_order_id or None)
+
+        event = self.register_webhook_delivery(
+            store=store,
+            webhook_id=webhook_id,
+            topic=topic,
+            shop_domain=shop_domain,
+            raw_payload=raw_text[:100000],
+        )
+        if webhook_id and not event:
+            trace.step(
+                llog.STEP_WEBHOOK_DUPLICATE,
+                status="idempotent",
+                msg="delivery already processed",
+            )
+            return {"ok": True, "code": 200, "duplicate": True, "operation": op}
+        if event:
+            trace.step(llog.STEP_EVENT_REGISTERED, msg="event=%s" % event.id)
+
+        try:
+            self._route_operation(store, op, payload, shop_domain, webhook_id, corr, trace)
+            self.mark_webhook_event_status(event, "processed")
+        except Exception as exc:
+            self.mark_webhook_event_status(event, "failed", str(exc))
+            trace.step(llog.STEP_FAILURE, status="failed", level=logging.ERROR, msg=str(exc))
+            raise
+        return {"ok": True, "code": 200, "operation": op}
+
+    @api.model
+    def _find_store_order(self, store, shopify_order_id):
+        if not shopify_order_id:
+            return self.env["sale.order"].sudo().browse()
+        return self.env["sale.order"].sudo().search(
+            [
+                ("shopify_order_id", "=", str(shopify_order_id)),
+                ("shopify_instance_id", "=", store.id),
+            ],
+            limit=1,
+        )
+
+    @api.model
+    def _route_operation(self, store, op, payload, shop_domain, webhook_id, correlation_id, trace=None):
+        """Operation-aware router shared by webhook + replay.
+
+        CREATE/UPDATE/FULFILLMENT/ORDER -> queue router (P2/P4).
+        CANCELLATION -> safe cancellation service (never deletes posted docs).
+        REFUND -> refund service with refund-id idempotency.
+        """
+        if op in (llog.OP_CREATE, llog.OP_UPDATE, llog.OP_FULFILLMENT, llog.OP_ORDER):
+            self.process_webhook_order(
+                payload,
+                store,
+                shop_domain=shop_domain,
+                is_valid_hmac=True,
+                operation=op,
+                webhook_id=webhook_id,
+                correlation_id=correlation_id,
+            )
+            return True
+
+        shopify_order_id = str(payload.get("id") or payload.get("order_id") or "")
+        if op == llog.OP_CANCELLATION:
+            order = self._find_store_order(store, shopify_order_id)
+            if not order or order.state == "cancel" or getattr(order, "shopify_cancelled", False):
+                return True
+            from ..services.refund_sync_service import RefundSyncService
+
+            RefundSyncService(self.env).cancel_order_from_shopify(
+                store, order, payload.get("cancel_reason") or payload.get("reason")
+            )
+            return True
+
+        if op == llog.OP_REFUND:
+            order_id = str(payload.get("order_id") or (payload.get("order") or {}).get("id") or "")
+            order = self._find_store_order(store, order_id)
+            if not order:
+                return True
+            refund_id = str(payload.get("id") or "")
+            Move = self.env["account.move"].sudo()
+            if refund_id and Move.search_count([("shopify_refund_id", "=", refund_id)]):
+                return True  # duplicate refund delivery
+            from ..services.refund_sync_service import RefundSyncService
+
+            RefundSyncService(self.env).sync_refund_from_webhook(store, order, payload)
+            return True
+
+        # Unknown operation: fall back to order queue (create-or-update at runtime).
+        self.process_webhook_order(
+            payload,
+            store,
+            shop_domain=shop_domain,
+            is_valid_hmac=True,
+            operation=llog.OP_ORDER,
+            webhook_id=webhook_id,
+            correlation_id=correlation_id,
+        )
+        return True
 
     @api.model
     def process_webhook_order(

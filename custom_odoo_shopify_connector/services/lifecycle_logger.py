@@ -24,6 +24,12 @@ LOG_PREFIX = "SHOPIFY_SYNC"
 # Lifecycle steps (stable, greppable tokens)
 # ---------------------------------------------------------------------------
 STEP_EVENT_RECEIVED = "EventReceived"
+# P1 — webhook ingestion
+STEP_WEBHOOK_RECEIVED = "WebhookReceived"
+STEP_HMAC_VALIDATED = "HmacValidated"
+STEP_HMAC_FAILED = "HmacFailed"
+STEP_EVENT_REGISTERED = "EventRegistered"
+STEP_WEBHOOK_DUPLICATE = "WebhookDuplicate"
 STEP_QUEUE_CREATED = "QueueCreated"
 STEP_QUEUE_PROCESSING = "QueueProcessing"
 STEP_EXISTING_ORDER_FOUND = "ExistingOrderFound"

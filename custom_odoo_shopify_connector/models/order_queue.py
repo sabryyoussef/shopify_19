@@ -177,8 +177,13 @@ class ShopifyOrderQueue(models.Model):
             payload.get("order_id") or payload.get("id")
         ):
             order_id = payload.get("order_id") or payload.get("id")
-            status = (payload.get("status") or "").strip().lower()
-            fulfillment_status = "fulfilled" if status == "success" else "partial"
+            # A single Fulfillment object that lists explicit line_items covers
+            # only those quantities. Label it "partial" so the P4 service applies
+            # ONLY the fulfilled quantities (it still completes the delivery
+            # automatically when those quantities cover the whole order, and keeps
+            # the remainder pending via a backorder otherwise). Only a fulfillment
+            # with no line detail is treated as a whole-order "fulfilled" signal.
+            fulfillment_status = "partial" if payload.get("line_items") else "fulfilled"
             return {
                 "id": order_id,
                 "fulfillments": [payload],
