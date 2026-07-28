@@ -93,7 +93,9 @@ class OrderUpdateService:
             return not posted
         return False
 
-    def _update_order_header(self, order, payload):
+    def _update_order_header(self, order, payload, store=None):
+        from .order_service import OrderService
+
         vals = {}
         if payload.get("total_price") is not None:
             try:
@@ -113,8 +115,31 @@ class OrderUpdateService:
             vals["shopify_payment_gateway"] = gateway_names[0]
         elif payload.get("gateway"):
             vals["shopify_payment_gateway"] = payload.get("gateway")
+
+        # WP-G: note is pure metadata, always safe to re-sync.
+        note = payload.get("note")
+        if note is not None and (order.note or "") != note:
+            vals["note"] = note
+
+        # WP-H: order tags, always safe to re-sync.
+        order_service = OrderService(self.env, import_service=self.import_service)
+        tags = order_service.extract_tags(payload)
+        if tags and (order.shopify_tags or "") != tags:
+            vals["shopify_tags"] = tags
+
+        # WP-G: currency changes are accounting-sensitive; only apply while no
+        # posted invoice exists for this order.
+        if not self._has_posted_invoice(order):
+            currency_id = order_service._get_currency_id(payload.get("currency"))
+            if currency_id and order.currency_id.id != currency_id:
+                vals["currency_id"] = currency_id
+
         if vals:
             order.write(vals)
+
+        # WP-D: shipping address is delivery metadata, safe to re-sync whenever
+        # the header itself is (never touches invoiced/paid accounting docs).
+        order_service.sync_shipping_address(order, payload, store=store or order.shopify_instance_id)
 
     def _find_line_by_shopify_id(self, order, line_item_id):
         return order.order_line.filtered(
@@ -180,6 +205,9 @@ class OrderUpdateService:
         ):
             if sale_line.shopify_line_item_id not in payload_ids:
                 sale_line.write({"product_uom_qty": 0.0})
+
+        # WP-J: reconcile the delivery line with any shipping_lines change.
+        order_service.sync_shipping_lines_on_update(order, store, payload)
 
         self._log(
             store,
@@ -270,7 +298,7 @@ class OrderUpdateService:
 
         # Safe metadata header update is allowed in every non-ignore case: these
         # are Shopify tracking fields on the sale order, not accounting documents.
-        self._update_order_header(order, payload)
+        self._update_order_header(order, payload, store=store)
 
         if strategy == STRATEGY_IN_PLACE:
             self._sync_lines_in_place(order, payload, store)
@@ -355,6 +383,50 @@ class OrderUpdateService:
 
         from .payment_fee_service import PaymentFeeService
 
+        # WP-J: remap a still-draft invoice's journal when the payment method
+        # changed, before the gateway string / fee amounts are re-applied.
+        self._remap_payment_journal(order, store, payload)
+
         fee_service = PaymentFeeService(self.env, import_service=self.import_service)
         fee_service.apply_fees_for_order(order, store, payload)
         return order
+
+    def _remap_payment_journal(self, order, store, payload):
+        """WP-J: when a Shopify order edit changes the payment gateway and the
+        order has no paid/posted-and-paid accounting yet, remap any draft
+        invoice's journal to the (possibly new) gateway's journal.
+
+        ``shopify.payment.gateway.odoo_journal_id`` is normally a bank/cash
+        journal used for *payment registration*; that side is already
+        re-resolved fresh from the current payload on every run of
+        ``sync_financials_on_update``, so it needs no remap here. Only remap
+        the invoice's own ``journal_id`` when the configured gateway journal
+        is actually a 'sale' journal (the only type Odoo allows there) --
+        otherwise this would raise validation errors on a normal bank/cash
+        payment-journal setup. Never touches a journal once payment evidence
+        exists on the order."""
+        if not order or not store or self._is_paid(order):
+            return
+
+        from .payment_fee_service import PaymentFeeService
+
+        fee_service = PaymentFeeService(self.env, import_service=self.import_service)
+        gateway = fee_service.resolve_gateway(store, payload)
+        if not gateway or not gateway.odoo_journal_id:
+            return
+        if gateway.odoo_journal_id.type != "sale":
+            return
+
+        draft_invoices = order.invoice_ids.filtered(
+            lambda m: m.move_type == "out_invoice" and m.state == "draft"
+        )
+        to_remap = draft_invoices.filtered(lambda m: m.journal_id != gateway.odoo_journal_id)
+        if to_remap:
+            to_remap.write({"journal_id": gateway.odoo_journal_id.id})
+            self._log(
+                store,
+                _("Draft invoice journal remapped to %s for sale order %s (payment method change).")
+                % (gateway.odoo_journal_id.name, order.name),
+                {"shopify_order_id": order.shopify_order_id, "invoice_ids": to_remap.ids},
+                order_id=order.shopify_order_id,
+            )

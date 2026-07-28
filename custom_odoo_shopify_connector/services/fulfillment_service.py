@@ -34,6 +34,15 @@ class ShopifyFulfillmentService:
         return [str(f.get("id")) for f in (payload.get("fulfillments") or []) if f.get("id")]
 
     @staticmethod
+    def _tracking_numbers(fulfillment):
+        """WP-E: normalize Shopify's tracking_number(s) fields to a list."""
+        numbers = fulfillment.get("tracking_numbers")
+        if not numbers:
+            single = fulfillment.get("tracking_number")
+            numbers = [single] if single else []
+        return [str(n) for n in numbers if n]
+
+    @staticmethod
     def _processed_set(order):
         return set(filter(None, (order.shopify_fulfillment_ids or "").split(",")))
 
@@ -196,6 +205,30 @@ class ShopifyFulfillmentService:
             validated |= picking
         return validated
 
+    def _apply_inbound_tracking(self, order, fulfillments):
+        """WP-E: write Shopify fulfillment tracking number(s) onto the
+        outgoing picking(s) (and per-package tracking when Shopify reports
+        multiple numbers for a multi-package shipment). Never overwrites a
+        tracking reference already set (idempotent on replay)."""
+        if not fulfillments:
+            return
+        pickings = self._outgoing_pickings(order)
+        if not pickings:
+            return
+        for fulfillment in fulfillments:
+            numbers = self._tracking_numbers(fulfillment)
+            if not numbers:
+                continue
+            tracking_ref = ",".join(dict.fromkeys(numbers))
+            for picking in pickings:
+                if not (picking.carrier_tracking_ref or "").strip():
+                    picking.write({"carrier_tracking_ref": tracking_ref})
+                if len(numbers) > 1:
+                    packages = picking.move_line_ids.mapped("result_package_id")
+                    for pkg, number in zip(packages, numbers):
+                        if pkg and not (pkg.carrier_tracking_ref or "").strip():
+                            pkg.write({"carrier_tracking_ref": str(number)})
+
     def _mark_shopify_origin(self, order):
         """Mark newly-completed pickings as Shopify-originated (loop guard)."""
         for picking in self._outgoing_pickings(order).filtered(lambda p: p.state == "done"):
@@ -328,6 +361,10 @@ class ShopifyFulfillmentService:
             )
             return {"ok": True, "delivery_completed": self._delivery_completed(order),
                     "mapping_failed": False, "reversal": False, "applied": False}
+
+        # WP-E: capture inbound tracking numbers regardless of whether the
+        # fulfillment carries line-item detail.
+        self._apply_inbound_tracking(order, new_fulfillments)
 
         fulfilled_map = self._build_fulfilled_map(new_fulfillments)
 

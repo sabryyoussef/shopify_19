@@ -985,6 +985,68 @@ class OrderImportService:
 
         return plan
 
+    def _stock_allows_confirm(self, order, store):
+        """Return (ok, message) for confirm_require_stock gate (BC-02 / WP-B)."""
+        if not store or not store.confirm_require_stock or not order:
+            return True, ""
+
+        StockService = self.env["shopify.stock.service"]
+        warehouse = store.default_unshipped_order_warehouse_id
+        location = warehouse.lot_stock_id if warehouse else None
+        shortages = []
+
+        for line in order.order_line.filtered(
+            lambda l: not l.display_type and l.product_id and l.product_uom_qty > 0
+        ):
+            product = line.product_id
+            if not getattr(product, "is_storable", False):
+                continue
+            free_qty = StockService._compute_base_quantity(product, store, location=location)
+            needed = line.product_uom_qty
+            if free_qty + 1e-6 < needed:
+                shortages.append(
+                    "%s: need %s, free %s"
+                    % (product.display_name, needed, free_qty)
+                )
+
+        if not shortages:
+            return True, ""
+        return False, "; ".join(shortages)
+
+    def sync_financials_on_update(self, order, store, payload, correlation_id=None):
+        """Re-apply invoice/payment decisions after Shopify order update (WP-A).
+
+        Used for pending→paid and additional partial payments. Does not create a
+        second SO; ``apply_workflow`` skips confirm if already confirmed and
+        reuses existing invoices / payment idempotency keys.
+        """
+        if not order or not store:
+            return
+        if order.state == "cancel":
+            return
+        if getattr(order, "shopify_cancelled", False):
+            return
+
+        payload = payload or {}
+        workflow = self.get_financial_workflow(store, payload) or store.sale_auto_workflow_id
+        if not workflow:
+            self._log(
+                store,
+                _("Financial sync on update skipped for %s: no workflow resolved.")
+                % order.name,
+                {"order_id": order.id, "shopify_order_id": order.shopify_order_id},
+                "failed",
+            )
+            return
+
+        self.apply_workflow(
+            order,
+            store,
+            payload=payload,
+            workflow=workflow,
+            correlation_id=correlation_id,
+        )
+
     def apply_workflow(self, order, store, payload=None, workflow=None, correlation_id=None):
         """Apply the configured sales auto workflow on the sale order.
 
@@ -1060,8 +1122,28 @@ class OrderImportService:
 
         payload_data = payload or {"order_id": order.id}
 
-        # STEP 2: Confirm quotation
+        # STEP 2: Confirm quotation (optional stock gate — WP-B / BC-02)
         if plan["confirm"] and order.state in ("draft", "sent"):
+            stock_ok, stock_msg = self._stock_allows_confirm(order, store)
+            if not stock_ok:
+                trace.step(
+                    llog.STEP_SKIPPED,
+                    so=order.name,
+                    status="blocked",
+                    level=logging.WARNING,
+                    msg="stock_gate %s" % stock_msg,
+                )
+                self._log(
+                    store,
+                    _(
+                        "Sale order %s not confirmed: insufficient stock "
+                        "(confirm_require_stock). %s"
+                    )
+                    % (order.name, stock_msg),
+                    payload_data,
+                    "failed",
+                )
+                return
             try:
                 order.action_confirm()
                 self._log(
@@ -1235,6 +1317,10 @@ class OrderImportService:
 
                 txn_ids = fee_service.extract_sale_transaction_ids(payload or {})
                 Payment = self.env["account.payment"]
+                # Only treat *new* transaction ids as payment keys. Previously any
+                # already-registered txn caused an early return and blocked later
+                # partial payments on the same order (WP-A / SO-04).
+                new_txn_ids = []
                 for txn_id in txn_ids:
                     if Payment.search_count([("shopify_transaction_id", "=", txn_id)]):
                         trace.step(
@@ -1243,13 +1329,18 @@ class OrderImportService:
                             txn=txn_id,
                             msg="duplicate_transaction already_registered",
                         )
-                        self._log(
-                            store,
-                            _("Payment already registered for Shopify transaction %s.") % txn_id,
-                            {"order_id": order.id, "transaction_id": txn_id},
-                            "success",
-                        )
-                        return
+                    else:
+                        new_txn_ids.append(txn_id)
+
+                if txn_ids and not new_txn_ids and amount <= 0:
+                    self._log(
+                        store,
+                        _("Payment already registered for known Shopify transactions on %s.")
+                        % order.name,
+                        {"order_id": order.id, "transaction_ids": txn_ids},
+                        "success",
+                    )
+                    return
 
                 payments = self.env["account.payment"]
                 try:
@@ -1287,7 +1378,7 @@ class OrderImportService:
                     payments = Payment.create(payment_vals)
                     payments.action_post()
 
-                shopify_txn_id = txn_ids[0] if txn_ids else False
+                shopify_txn_id = new_txn_ids[0] if new_txn_ids else False
                 if payments and shopify_txn_id:
                     payments.write({"shopify_transaction_id": shopify_txn_id})
 

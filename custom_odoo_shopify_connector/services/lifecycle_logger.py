@@ -36,6 +36,8 @@ STEP_EXISTING_ORDER_FOUND = "ExistingOrderFound"
 STEP_UPDATE_STRATEGY_SELECTED = "UpdateStrategySelected"
 STEP_SO_CREATED = "SOCreated"
 STEP_SO_UPDATED = "SOUpdated"
+STEP_ARCHIVE_SYNCED = "ArchiveSynced"
+STEP_REOPEN_REVIEW_FLAGGED = "ReopenReviewFlagged"
 STEP_PICKING_UPDATED = "PickingUpdated"
 # P4 — fulfillment lifecycle
 STEP_FULFILLMENT_RECEIVED = "FulfillmentReceived"

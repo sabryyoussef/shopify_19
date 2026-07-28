@@ -9,6 +9,7 @@
                     <field name="sale_order_id" readonly="1"/>
                     <field name="store_id" readonly="1"/>
                     <field name="note"/>
+                    <field name="replacement_restock_mode"/>
                     <field name="total_return_amount" readonly="1"/>
                     <field name="total_replacement_amount" readonly="1"/>
                     <field name="price_difference" readonly="1"/>

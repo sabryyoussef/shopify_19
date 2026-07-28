@@ -107,6 +107,22 @@
         sequence="30"
     />
 
+    <menuitem
+        id="menu_shopify_configuration_website_category_maps"
+        name="Website Category Maps"
+        parent="menu_shopify_configuration_product_settings"
+        action="action_shopify_public_category_map"
+        sequence="35"
+    />
+
+    <menuitem
+        id="menu_shopify_configuration_sync_website_categories"
+        name="Sync Website Categories"
+        parent="menu_shopify_configuration_product_settings"
+        action="action_shopify_public_category_sync_wizard"
+        sequence="36"
+    />
+
     <!-- Stock Settings -->
     <menuitem
         id="menu_shopify_configuration_stock_settings"

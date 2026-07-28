@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_shopify_public_category_map_list" model="ir.ui.view">
+        <field name="name">shopify.public.category.map.list</field>
+        <field name="model">shopify.public.category.map</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="store_id"/>
+                <field name="public_categ_name"/>
+                <field name="parent_categ_id"/>
+                <field name="shopify_collection_id"/>
+                <field name="shopify_handle"/>
+                <field name="nav_eligible"/>
+                <field name="published_on_shopify"/>
+                <field name="sync_state"/>
+                <field name="last_sync_at"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_shopify_public_category_map_form" model="ir.ui.view">
+        <field name="name">shopify.public.category.map.form</field>
+        <field name="model">shopify.public.category.map</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_dry_run_one" type="object" string="Dry-run" class="btn-secondary"/>
+                    <button name="action_sync_one" type="object" string="Sync (unpublished)" class="btn-primary"
+                            confirm="Creates/updates an unpublished custom collection and memberships. Does not publish to Online Store."/>
+                    <field name="sync_state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="store_id"/>
+                            <field name="public_categ_id"/>
+                            <field name="parent_categ_id"/>
+                            <field name="collection_type"/>
+                        </group>
+                        <group>
+                            <field name="shopify_collection_id"/>
+                            <field name="shopify_handle"/>
+                            <field name="published_on_shopify"/>
+                            <field name="nav_eligible"/>
+                            <field name="last_sync_at"/>
+                        </group>
+                    </group>
+                    <group string="Counts">
+                        <field name="product_count_odoo"/>
+                        <field name="product_count_mapped"/>
+                    </group>
+                    <group string="Errors / last plan">
+                        <field name="sync_error" readonly="1"/>
+                        <field name="last_dry_run_json" readonly="1" widget="text"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_shopify_public_category_map" model="ir.actions.act_window">
+        <field name="name">Website Category Maps</field>
+        <field name="res_model">shopify.public.category.map</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="view_shopify_public_category_sync_wizard_form" model="ir.ui.view">
+        <field name="name">shopify.public.category.sync.wizard.form</field>
+        <field name="model">shopify.public.category.sync.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Sync Website Categories to Shopify">
+                <group>
+                    <field name="store_id"/>
+                    <field name="public_categ_id"/>
+                    <field name="dry_run"/>
+                    <field name="sync_membership"/>
+                </group>
+                <group string="Result" invisible="not result_json">
+                    <field name="result_json" nolabel="1" widget="text" readonly="1"/>
+                </group>
+                <footer>
+                    <button name="action_run" type="object" string="Run" class="btn-primary"/>
+                    <button string="Close" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_shopify_public_category_sync_wizard" model="ir.actions.act_window">
+        <field name="name">Sync Website Categories</field>
+        <field name="res_model">shopify.public.category.sync.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

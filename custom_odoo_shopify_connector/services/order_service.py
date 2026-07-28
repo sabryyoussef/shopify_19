@@ -75,6 +75,16 @@ class OrderService:
         if discount_source:
             order_vals["shopify_discount_source"] = discount_source
 
+        # WP-G: order note (Shopify "note" -> SO Terms & Conditions / note field).
+        note = payload.get("note")
+        if note:
+            order_vals["note"] = note
+
+        # WP-H: Shopify order tags, stored as a normalized comma-separated string.
+        tags = self.extract_tags(payload)
+        if tags:
+            order_vals["shopify_tags"] = tags
+
         # Order naming: either use Odoo sequence or Shopify order number with optional prefix
         if store and not store.use_odoo_sequence:
             shopify_name = payload.get("name")  # e.g. "#1044"
@@ -84,6 +94,31 @@ class OrderService:
                 order_vals["name"] = "%s%s" % (prefix, number)
 
         return order_vals
+
+    def _get_currency_id(self, currency_code):
+        """WP-G: resolve a Shopify currency code to an active Odoo currency.
+        Never auto-creates/activates a currency; silently skips when unknown
+        or disabled so single-currency setups are unaffected."""
+        if not currency_code:
+            return False
+        currency = self.env["res.currency"].search(
+            [("name", "=", str(currency_code).upper()), ("active", "=", True)],
+            limit=1,
+        )
+        return currency.id if currency else False
+
+    @staticmethod
+    def extract_tags(payload):
+        """WP-H: normalize the raw Shopify order 'tags' value (comma-separated
+        string or list) into a stable comma-separated string, or False."""
+        tags = payload.get("tags")
+        if not tags:
+            return False
+        if isinstance(tags, (list, tuple)):
+            parts = [str(t).strip() for t in tags if str(t).strip()]
+        else:
+            parts = [t.strip() for t in str(tags).split(",") if t.strip()]
+        return ", ".join(parts) if parts else False
 
     def _resolve_shopify_user_id(self, store=None):
         """Salesperson for Shopify-imported orders (cron-safe when store field is set)."""
@@ -438,6 +473,93 @@ class OrderService:
         if shipping_line_vals:
             self.env["sale.order.line"].create(shipping_line_vals)
 
+    def sync_shipping_lines_on_update(self, order, store, payload):
+        """WP-J: reconcile the sale order's delivery line with Shopify
+        ``shipping_lines`` on an order edit. Adjusts price/name in place (or
+        creates/zeroes the line) instead of blindly re-creating shipping
+        lines; callers are responsible for gating this to accounting-safe
+        edit strategies."""
+        if not (store and store.delivery_product_id):
+            return
+        shipping_lines = payload.get("shipping_lines")
+        if shipping_lines is None:
+            return
+
+        existing = order.order_line.filtered(
+            lambda l: l.product_id.id == store.delivery_product_id.id and not l.display_type
+        )
+        active_lines = [ship for ship in shipping_lines if not ship.get("is_removed")]
+        if not active_lines:
+            if existing:
+                existing.write({"product_uom_qty": 0.0})
+            return
+
+        taxes_included = bool(payload.get("taxes_included"))
+        total_price = 0.0
+        title = None
+        taxes = self.env["account.tax"]
+        for ship in active_lines:
+            total_price += self._shipping_line_price(ship)
+            title = title or ship.get("title")
+            if self.import_service:
+                taxes |= self.import_service.get_taxes_for_line(
+                    store, ship, taxes_included=taxes_included
+                )
+        total_price = float_round(total_price, 2)
+
+        if existing:
+            line = existing[0]
+            vals = {}
+            if line.product_uom_qty != 1.0:
+                vals["product_uom_qty"] = 1.0
+            if float_round(line.price_unit, 2) != total_price:
+                vals["price_unit"] = total_price
+            if title and line.name != title:
+                vals["name"] = title
+            if vals:
+                line.write(vals)
+            extra = existing[1:]
+            if extra:
+                extra.write({"product_uom_qty": 0.0})
+        else:
+            vals = {
+                "order_id": order.id,
+                "product_id": store.delivery_product_id.id,
+                "name": title or _("Shipping"),
+                "product_uom_qty": 1.0,
+                "price_unit": total_price,
+            }
+            sale_line_model = self.env["sale.order.line"]
+            if "tax_ids" in sale_line_model._fields:
+                vals["tax_ids"] = [(6, 0, taxes.ids)]
+            elif "tax_id" in sale_line_model._fields:
+                vals["tax_id"] = [(6, 0, taxes.ids)]
+            self.env["sale.order.line"].create(vals)
+
+    def sync_shipping_address(self, order, payload, store=None):
+        """WP-D: create/update the delivery child contact from a Shopify
+        ``shipping_address`` payload and point the sale order (and any open
+        outgoing pickings) at it. Done pickings are left untouched."""
+        shipping = payload.get("shipping_address") or {}
+        if not shipping or not order.partner_id:
+            return order.partner_shipping_id
+
+        parent = order.partner_id.commercial_partner_id or order.partner_id
+        default_name = parent.name or _("Shipping Address")
+        partner_shipping = self._get_or_create_child_contact(
+            parent, shipping, "delivery", default_name
+        )
+        if order.partner_shipping_id != partner_shipping:
+            order.write({"partner_shipping_id": partner_shipping.id})
+
+        open_pickings = order.picking_ids.filtered(
+            lambda p: p.picking_type_code == "outgoing" and p.state not in ("done", "cancel")
+        )
+        if open_pickings:
+            open_pickings.write({"partner_id": partner_shipping.id})
+
+        return partner_shipping
+
     def create_order_from_payload(self, payload, store=None):
         SaleOrder = self.env["sale.order"]
         Partner = self.env["res.partner"]
@@ -468,6 +590,13 @@ class OrderService:
 
         order_vals = self._build_order_vals(payload, store, partner)
         order = SaleOrder.create(order_vals)
+
+        # WP-G: currency_id is a computed/stored field (depends on company_id,
+        # among others); setting it inside the create() vals gets clobbered by
+        # that same-call recompute, so it must be applied in a separate write.
+        currency_id = self._get_currency_id(payload.get("currency"))
+        if currency_id and order.currency_id.id != currency_id:
+            order.currency_id = currency_id
 
         self._ensure_order_mapping(store, shopify_order_id, order)
 

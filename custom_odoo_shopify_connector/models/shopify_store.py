@@ -97,6 +97,35 @@ class ShopifyStore(models.Model):
         default="register_paid_amount",
         help="How partially_paid Shopify orders register payments in Odoo.",
     )
+    confirm_require_stock = fields.Boolean(
+        string="Require Stock Before Confirm",
+        default=False,
+        help="If enabled, sale orders are not confirmed when free quantity is "
+        "insufficient for any storable line (iZone stock gate). "
+        "Orders stay draft/sent and a sync log entry is written.",
+    )
+    sync_archive_status = fields.Boolean(
+        string="Sync Shopify Archive Status",
+        default=True,
+        help="When enabled, Shopify closed/archived orders set metadata flags "
+        "on the Odoo Sales Order (shopify_is_archived / shopify_archived_at). "
+        "Never changes Odoo workflow, invoices, payments, or stock.",
+    )
+    sync_reopen_manual_review = fields.Boolean(
+        string="Reopened Order Manual Review",
+        default=True,
+        help="When a previously cancelled Shopify order is reopened "
+        "(cancelled_at cleared on orders/updated), flag the Odoo Sales Order "
+        "for manual review, post chatter, and schedule an activity. "
+        "Never auto-resets the Sales Order or creates a replacement.",
+    )
+    reopen_activity_user_id = fields.Many2one(
+        "res.users",
+        string="Reopened Order Activity User",
+        help="User who receives the todo activity when a cancelled Shopify "
+        "order is reopened. Falls back to the order salesperson, then the "
+        "store import salesperson.",
+    )
     refund_restock_mode = fields.Selection(
         [
             ("credit_note_only", "Credit Note Only"),
@@ -116,6 +145,18 @@ class ShopifyStore(models.Model):
         "stock.warehouse",
         string="Default Return Warehouse",
         help="Warehouse used for refund restock when Shopify location is not mapped.",
+    )
+    replacement_restock_mode = fields.Selection(
+        [
+            ("restock", "Restock Returned Qty"),
+            ("no_restock", "No Restock (Damaged)"),
+        ],
+        string="Exchange Replacement Restock Mode",
+        default="restock",
+        help="Default restock behavior for damaged-item replacements processed "
+        "via the Shopify Exchange wizard. 'No Restock' forces a credit-note-only "
+        "handling of the returned/damaged quantity for that exchange, regardless "
+        "of Refund Restock Mode. Overridable per exchange on the wizard.",
     )
     outbound_refund_restock_type = fields.Selection(
         [

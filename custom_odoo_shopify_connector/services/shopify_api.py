@@ -1,6 +1,7 @@
 import requests
 import time
 import logging
+import re
 
 from odoo import _
 from odoo.exceptions import UserError
@@ -741,3 +742,135 @@ class ShopifyAPI:
     def get_primary_location(self):
         locations = self.get_locations()
         return locations[0]["id"] if locations else None
+
+    # =========================================================
+    # CUSTOM COLLECTIONS + COLLECTS (public category sync)
+    # =========================================================
+    def list_custom_collections(self, limit=250, **params):
+        params = dict(params or {})
+        params.setdefault("limit", limit)
+        res = self._request("GET", "/custom_collections.json", params=params)
+        return res.get("custom_collections", [])
+
+    def list_smart_collections(self, limit=250, **params):
+        params = dict(params or {})
+        params.setdefault("limit", limit)
+        res = self._request("GET", "/smart_collections.json", params=params)
+        return res.get("smart_collections", [])
+
+    def get_custom_collection(self, collection_id):
+        path = f"/custom_collections/{collection_id}.json"
+        res = self._request("GET", path)
+        return res.get("custom_collection")
+
+    def find_custom_collection_by_handle(self, handle):
+        cols = self.list_custom_collections(handle=handle, limit=1)
+        for col in cols or []:
+            if (col.get("handle") or "") == handle:
+                return col
+        # Shopify handle filter may be inexact — scan
+        for col in self.list_custom_collections(limit=250) or []:
+            if (col.get("handle") or "") == handle:
+                return col
+        return None
+
+    def create_custom_collection(self, collection_vals):
+        payload = {"custom_collection": collection_vals}
+        res = self._request("POST", "/custom_collections.json", data=payload)
+        return res.get("custom_collection") or {}
+
+    def update_custom_collection(self, collection_id, collection_vals):
+        payload = {"custom_collection": collection_vals}
+        path = f"/custom_collections/{collection_id}.json"
+        res = self._request("PUT", path, data=payload)
+        return res.get("custom_collection") or {}
+
+    def get_custom_collection_metafields(self, collection_id, **params):
+        path = f"/collections/{collection_id}/metafields.json"
+        res = self._request("GET", path, params=params or {})
+        return res.get("metafields", [])
+
+    def upsert_custom_collection_metafield(self, collection_id, namespace, key, mtype, value):
+        existing = self.get_custom_collection_metafields(collection_id) or []
+        for mf in existing:
+            if mf.get("namespace") == namespace and mf.get("key") == key:
+                path = f"/collections/{collection_id}/metafields/{mf['id']}.json"
+                payload = {
+                    "metafield": {
+                        "id": mf["id"],
+                        "type": mtype,
+                        "value": value,
+                    }
+                }
+                return self._request("PUT", path, data=payload)
+        payload = {
+            "metafield": {
+                "namespace": namespace,
+                "key": key,
+                "type": mtype,
+                "value": value,
+            }
+        }
+        path = f"/collections/{collection_id}/metafields.json"
+        return self._request("POST", path, data=payload)
+
+    def find_custom_collection_by_metafield(self, namespace, key, value):
+        """Scan custom collections for a matching metafield (bounded)."""
+        for col in self.list_custom_collections(limit=250) or []:
+            cid = col.get("id")
+            if not cid:
+                continue
+            try:
+                metas = self.get_custom_collection_metafields(cid) or []
+            except Exception:
+                continue
+            for mf in metas:
+                if (
+                    mf.get("namespace") == namespace
+                    and mf.get("key") == key
+                    and str(mf.get("value")) == str(value)
+                ):
+                    return col
+        return None
+
+    def list_collects(self, collection_id=None, product_id=None, limit=250):
+        params = {"limit": min(int(limit or 250), 250)}
+        if collection_id:
+            params["collection_id"] = collection_id
+        if product_id:
+            params["product_id"] = product_id
+        collects = []
+        since_id = 0
+        while True:
+            req_params = dict(params)
+            if since_id:
+                req_params["since_id"] = since_id
+            res = self._request("GET", "/collects.json", params=req_params)
+            batch = res.get("collects", []) or []
+            if not batch:
+                break
+            collects.extend(batch)
+            try:
+                since_id = max(int(c.get("id") or 0) for c in batch)
+            except Exception:
+                break
+            if len(batch) < req_params["limit"]:
+                break
+            if len(collects) > 50000:
+                break
+            time.sleep(0.15)
+        return collects
+
+    def create_collect(self, collection_id, product_id):
+        payload = {
+            "collect": {
+                "collection_id": int(collection_id),
+                "product_id": int(product_id),
+            }
+        }
+        res = self._request("POST", "/collects.json", data=payload)
+        return res.get("collect") or {}
+
+    def delete_collect(self, collect_id):
+        path = f"/collects/{collect_id}.json"
+        return self._request("DELETE", path)

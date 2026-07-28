@@ -11,6 +11,17 @@
                         string="Shopify Exchange"
                         class="btn-secondary"
                         invisible="not shopify_order_id"/>
+                <button name="action_mark_shopify_reopen_reviewed"
+                        type="object"
+                        string="Mark Reopen Reviewed"
+                        class="btn-primary"
+                        invisible="not shopify_reopen_pending_review"/>
+                <button name="action_create_shopify_reopen_replacement"
+                        type="object"
+                        string="Create Replacement Quotation"
+                        class="btn-secondary"
+                        confirm="Create a draft replacement quotation linked to this order? This does not reopen or change the cancelled Sales Order state."
+                        invisible="shopify_reopen_replacement_id or (not shopify_reopen_pending_review and not shopify_reopened_at)"/>
             </xpath>
             <xpath expr="//div[@name='button_box']" position="inside">
                 <button name="action_view_shopify_sync_logs"
@@ -27,6 +38,30 @@
                         invisible="not shopify_order_id">
                     <field name="shopify_credit_note_count" widget="statinfo" string="Credit Notes"/>
                 </button>
+                <button type="object"
+                        name="action_view_shopify_reopen_replacement"
+                        class="oe_stat_button"
+                        icon="fa-files-o"
+                        invisible="not shopify_reopen_replacement_id">
+                    <div class="o_stat_info">
+                        <span class="o_stat_text">Reopen Quote</span>
+                    </div>
+                </button>
+            </xpath>
+            <xpath expr="//sheet" position="before">
+                <div class="alert alert-warning mb-0" role="alert"
+                     invisible="not shopify_reopen_pending_review">
+                    <strong>Shopify order reopened — manual review required.</strong>
+                    Odoo Sales Order state was not changed automatically.
+                    Review accounting and stock before creating a replacement quotation.
+                </div>
+                <div class="alert alert-secondary mb-0" role="status"
+                     invisible="not shopify_is_archived">
+                    <strong>Shopify Archived</strong>
+                    This order is archived/closed in Shopify
+                    (<field name="shopify_archived_at" readonly="1" class="oe_inline"/>).
+                    Odoo workflow was not changed.
+                </div>
             </xpath>
             <xpath expr="//notebook" position="inside">
                 <page string="Shopify" invisible="not shopify_order_id">
@@ -36,6 +71,7 @@
                             <field name="shopify_instance_id" readonly="1"/>
                             <field name="shopify_payment_gateway" readonly="1"/>
                             <field name="shopify_fulfillment_status" readonly="1"/>
+                            <field name="shopify_tags" readonly="1"/>
                         </group>
                         <group string="Payment &amp; Refunds">
                             <field name="shopify_order_total" readonly="1"/>
@@ -45,6 +81,21 @@
                             <field name="shopify_refunded_amount" readonly="1"/>
                             <field name="shopify_refunded" readonly="1"/>
                             <field name="shopify_exchange_parent_id" readonly="1"/>
+                        </group>
+                    </group>
+                    <group string="Archive &amp; Reopen">
+                        <group>
+                            <field name="shopify_is_archived" readonly="1"/>
+                            <field name="shopify_archived_at" readonly="1"/>
+                            <field name="shopify_cancelled" readonly="1"/>
+                            <field name="shopify_cancel_reason" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="shopify_reopen_pending_review" readonly="1"/>
+                            <field name="shopify_reopened_at" readonly="1"/>
+                            <field name="shopify_reopen_replacement_id" readonly="1"/>
+                            <field name="shopify_reopen_original_id" readonly="1"/>
+                            <field name="shopify_reopen_payload" readonly="1" widget="text"/>
                         </group>
                     </group>
                     <group string="Exchange Replacements" invisible="not shopify_exchange_child_ids">
@@ -72,6 +123,26 @@
                         string="Cancel on Shopify"
                         class="btn-secondary"
                         invisible="state != 'cancel' or not shopify_order_id or shopify_cancelled"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_sale_order_search_shopify_archive_reopen" model="ir.ui.view">
+        <field name="name">sale.order.search.shopify.archive.reopen</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_sales_order_filter"/>
+        <field name="arch" type="xml">
+            <xpath expr="//search" position="inside">
+                <separator/>
+                <filter string="Shopify Archived"
+                        name="shopify_archived"
+                        domain="[('shopify_is_archived', '=', True)]"/>
+                <filter string="Shopify Active / Not Archived"
+                        name="shopify_not_archived"
+                        domain="[('shopify_order_id', '!=', False), ('shopify_is_archived', '=', False)]"/>
+                <filter string="Shopify Reopen Pending Review"
+                        name="shopify_reopen_pending"
+                        domain="[('shopify_reopen_pending_review', '=', True)]"/>
             </xpath>
         </field>
     </record>

@@ -1,4 +1,5 @@
 from odoo import api, fields, models, _
+from odoo.exceptions import UserError
 
 
 class SaleOrder(models.Model):
@@ -77,6 +78,52 @@ class SaleOrder(models.Model):
         string="Shopify Cancel Reason",
         help="Cancellation reason received from Shopify or sent from Odoo.",
     )
+    shopify_is_archived = fields.Boolean(
+        string="Shopify Archived",
+        default=False,
+        index=True,
+        copy=False,
+        help="True when the Shopify order is closed/archived (closed_at set). "
+        "Metadata only — does not change Odoo Sales Order workflow.",
+    )
+    shopify_archived_at = fields.Datetime(
+        string="Shopify Archived At",
+        copy=False,
+        help="Timestamp when the Shopify order was archived/closed.",
+    )
+    shopify_reopen_pending_review = fields.Boolean(
+        string="Shopify Reopen Pending Review",
+        default=False,
+        index=True,
+        copy=False,
+        help="Shopify cancelled order was reopened; manual review required. "
+        "Odoo Sales Order state is never auto-reset.",
+    )
+    shopify_reopened_at = fields.Datetime(
+        string="Shopify Reopened At",
+        copy=False,
+        help="When the connector detected a Shopify cancelled-order reopen.",
+    )
+    shopify_reopen_payload = fields.Text(
+        string="Shopify Reopen Payload Ref",
+        copy=False,
+        help="Safe truncated snapshot of reopen webhook fields for audit.",
+    )
+    shopify_reopen_replacement_id = fields.Many2one(
+        "sale.order",
+        string="Reopen Replacement Quotation",
+        copy=False,
+        ondelete="set null",
+        help="Draft quotation created manually after a Shopify reopen review.",
+    )
+    shopify_reopen_original_id = fields.Many2one(
+        "sale.order",
+        string="Reopen Original Order",
+        copy=False,
+        ondelete="set null",
+        index=True,
+        help="Original cancelled Sales Order this replacement quotation was created from.",
+    )
 
     shopify_refunded = fields.Boolean(
         string="Shopify Refunded",
@@ -143,6 +190,11 @@ class SaleOrder(models.Model):
         string="Shopify Exchange Key",
         index=True,
         help="Idempotency key for exchange processing (e.g. exchange-<order_id>).",
+    )
+    shopify_tags = fields.Char(
+        string="Shopify Tags",
+        index=True,
+        help="Comma-separated order tags synced from Shopify.",
     )
     shopify_sync_log_count = fields.Integer(
         compute="_compute_shopify_timeline_counts",
@@ -236,6 +288,127 @@ class SaleOrder(models.Model):
                 "default_sale_order_id": self.id,
                 "default_store_id": self.shopify_instance_id.id,
             },
+        }
+
+    def action_mark_shopify_reopen_reviewed(self):
+        """Clear pending-review flag only — never change SO state."""
+        for order in self:
+            if not order.shopify_reopen_pending_review:
+                continue
+            order.write({"shopify_reopen_pending_review": False})
+            order.message_post(
+                body=_(
+                    "Shopify reopen marked as reviewed. "
+                    "Sales Order state was not changed."
+                )
+            )
+            # Close matching activities if still open.
+            activities = self.env["mail.activity"].sudo().search(
+                [
+                    ("res_model", "=", "sale.order"),
+                    ("res_id", "=", order.id),
+                    (
+                        "summary",
+                        "=",
+                        "Shopify order reopened — manual review required",
+                    ),
+                ]
+            )
+            activities.action_feedback(feedback=_("Marked reopen reviewed."))
+        return True
+
+    def action_view_shopify_reopen_replacement(self):
+        self.ensure_one()
+        if not self.shopify_reopen_replacement_id:
+            return False
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Reopen Replacement Quotation"),
+            "res_model": "sale.order",
+            "res_id": self.shopify_reopen_replacement_id.id,
+            "view_mode": "form",
+            "target": "current",
+        }
+
+    def action_create_shopify_reopen_replacement(self):
+        """Create one linked draft quotation from safe commercial data only."""
+        self.ensure_one()
+        if self.shopify_reopen_replacement_id:
+            raise UserError(
+                _(
+                    "A replacement quotation already exists (%s). "
+                    "Open it instead of creating another."
+                )
+                % self.shopify_reopen_replacement_id.display_name
+            )
+        if not self.shopify_reopen_pending_review and not self.shopify_reopened_at:
+            raise UserError(
+                _("This order has no Shopify reopen review to act on.")
+            )
+
+        line_cmds = []
+        for line in self.order_line.filtered(lambda l: not l.display_type):
+            line_cmds.append(
+                (
+                    0,
+                    0,
+                    {
+                        "product_id": line.product_id.id,
+                        "name": line.name,
+                        "product_uom_qty": line.product_uom_qty,
+                        "product_uom_id": line.product_uom_id.id,
+                        "price_unit": line.price_unit,
+                        "discount": line.discount,
+                        "tax_ids": [(6, 0, line.tax_ids.ids)],
+                    },
+                )
+            )
+        if not line_cmds:
+            raise UserError(
+                _("Cannot create a replacement quotation without product lines.")
+            )
+
+        vals = {
+            "partner_id": self.partner_id.id,
+            "partner_invoice_id": self.partner_invoice_id.id or self.partner_id.id,
+            "partner_shipping_id": self.partner_shipping_id.id or self.partner_id.id,
+            "company_id": self.company_id.id,
+            "pricelist_id": self.pricelist_id.id,
+            "currency_id": self.currency_id.id,
+            "payment_term_id": self.payment_term_id.id,
+            "warehouse_id": self.warehouse_id.id,
+            "shopify_instance_id": self.shopify_instance_id.id,
+            "shopify_reopen_original_id": self.id,
+            "origin": _("Reopen replacement for %s") % self.name,
+            "client_order_ref": _("REOPEN-%s")
+            % (self.client_order_ref or self.name),
+            "note": self.note,
+            "order_line": line_cmds,
+            # Intentionally omit shopify_order_id (unique) and financial flags.
+        }
+        replacement = self.env["sale.order"].create(vals)
+        self.write({"shopify_reopen_replacement_id": replacement.id})
+        self.message_post(
+            body=_(
+                "Created reopen replacement quotation %(name)s. "
+                "Original Sales Order state unchanged."
+            )
+            % {"name": replacement.display_name}
+        )
+        replacement.message_post(
+            body=_(
+                "Replacement quotation for reopened Shopify order "
+                "(original: %(name)s)."
+            )
+            % {"name": self.display_name}
+        )
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Reopen Replacement Quotation"),
+            "res_model": "sale.order",
+            "res_id": replacement.id,
+            "view_mode": "form",
+            "target": "current",
         }
 
     _sql_constraints = [

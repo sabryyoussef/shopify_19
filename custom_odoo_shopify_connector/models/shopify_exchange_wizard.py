@@ -15,6 +15,17 @@ class ShopifyExchangeWizard(models.TransientModel):
         string="Return Lines",
     )
     note = fields.Text(string="Exchange Note")
+    replacement_restock_mode = fields.Selection(
+        [
+            ("restock", "Restock Returned Qty"),
+            ("no_restock", "No Restock (Damaged)"),
+        ],
+        string="Restock Mode",
+        default="restock",
+        help="'No Restock' is used for damaged items: the returned quantity is "
+        "never added back to stock for this exchange, even if the store's "
+        "Refund Restock Mode allows restocking.",
+    )
     total_return_amount = fields.Float(
         string="Return Total",
         compute="_compute_amounts",
@@ -51,6 +62,10 @@ class ShopifyExchangeWizard(models.TransientModel):
     @api.model
     def default_get(self, fields_list):
         res = super().default_get(fields_list)
+        store_id = self.env.context.get("default_store_id")
+        if store_id and "replacement_restock_mode" in fields_list:
+            store = self.env["shopify.store"].browse(store_id)
+            res["replacement_restock_mode"] = store.replacement_restock_mode or "restock"
         order_id = self.env.context.get("default_sale_order_id")
         if order_id and "line_ids" in fields_list:
             order = self.env["sale.order"].browse(order_id)
@@ -100,6 +115,11 @@ class ShopifyExchangeWizard(models.TransientModel):
         replacement_lines = []
         return_total = 0.0
         replacement_total = 0.0
+        is_damaged_no_restock = self.replacement_restock_mode == "no_restock"
+        # WP-F: "restock_type" mirrors Shopify's own refund webhook convention so
+        # ReturnPickingService.create_return_from_refund() honors it consistently
+        # for both webhook refunds and manual exchanges.
+        line_restock_type = "no_restock" if is_damaged_no_restock else "return"
 
         for wiz_line in self.line_ids:
             if wiz_line.return_qty <= 0:
@@ -124,6 +144,7 @@ class ShopifyExchangeWizard(models.TransientModel):
                     "line_item_id": sol.shopify_line_item_id,
                     "quantity": wiz_line.return_qty,
                     "subtotal": line_return_amount,
+                    "restock_type": line_restock_type,
                 }
             )
             replacement_lines.append(
@@ -160,7 +181,17 @@ class ShopifyExchangeWizard(models.TransientModel):
         credit = refund_service._create_partial_credit_note(
             store, order, invoice, refund_payload, mapped
         )
-        if store.refund_restock_mode in ("odoo_restock", "both"):
+        if is_damaged_no_restock:
+            # WP-F: force credit_note_only handling for this exchange's
+            # returned/damaged quantity, regardless of the store-wide setting.
+            refund_service._log(
+                store,
+                _("Exchange for %s processed as damaged replacement (no restock).")
+                % order.name,
+                {"exchange_key": exchange_key},
+                order_id=order.shopify_order_id,
+            )
+        elif store.refund_restock_mode in ("odoo_restock", "both"):
             from ..services.return_picking_service import ReturnPickingService
 
             ReturnPickingService(self.env).create_return_from_refund(

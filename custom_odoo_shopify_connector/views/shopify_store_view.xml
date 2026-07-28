@@ -84,10 +84,15 @@
                                     <field name="cancel_sync_mode"/>
                                     <field name="order_edit_sync_mode"/>
                                     <field name="partial_payment_mode"/>
+                                    <field name="confirm_require_stock"/>
+                                    <field name="sync_archive_status"/>
+                                    <field name="sync_reopen_manual_review"/>
+                                    <field name="reopen_activity_user_id" invisible="not sync_reopen_manual_review"/>
                                     <field name="refund_restock_mode"/>
                                     <field name="refund_restock_validate" invisible="refund_restock_mode == 'credit_note_only'"/>
                                     <field name="default_return_warehouse_id" invisible="refund_restock_mode == 'credit_note_only'"/>
                                     <field name="outbound_refund_restock_type"/>
+                                    <field name="replacement_restock_mode"/>
                                     <field name="use_odoo_sequence"/>
                                     <field name="order_prefix" invisible="use_odoo_sequence"/>
                                     <field name="default_pos_customer_id"/>

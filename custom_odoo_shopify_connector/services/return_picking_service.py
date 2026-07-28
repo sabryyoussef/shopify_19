@@ -99,6 +99,7 @@ class ReturnPickingService:
                     "picking_id": picking.id,
                     "location_id": picking_type.default_location_src_id.id,
                     "location_dest_id": picking_type.default_location_dest_id.id,
+                    "sale_line_id": sale_line.id,
                 }
             )
             if store.refund_restock_validate:
@@ -117,3 +118,106 @@ class ReturnPickingService:
                 order_id=order.shopify_order_id,
             )
         return pickings
+
+    def _outgoing_done_pickings(self, order):
+        return order.picking_ids.filtered(
+            lambda p: p.picking_type_code == "outgoing" and p.state == "done"
+        )
+
+    def create_return_for_cancelled_order(self, store, order, reason=None):
+        """WP-C: create an incoming return picking for the already-delivered
+        quantities of an order that is being cancelled or fully refunded after
+        shipment. Honors ``refund_restock_mode`` (skipped for credit_note_only)
+        and is idempotent per order/origin."""
+        if not store or not order:
+            return self.env["stock.picking"]
+        if (store.refund_restock_mode or "credit_note_only") == "credit_note_only":
+            return self.env["stock.picking"]
+
+        done_pickings = self._outgoing_done_pickings(order)
+        if not done_pickings:
+            return self.env["stock.picking"]
+
+        origin = _("Shopify cancel/refund return %s") % order.name
+        existing = self.env["stock.picking"].search(
+            [
+                ("sale_id", "=", order.id),
+                ("picking_type_id.code", "=", "incoming"),
+                ("origin", "=", origin),
+            ]
+        )
+        if existing:
+            return existing
+
+        warehouse = self._resolve_warehouse(store, False)
+        if not warehouse:
+            self._log(
+                store,
+                _("Cancel/refund restock skipped: no warehouse configured for order %s.")
+                % order.name,
+                {"order": order.name, "reason": reason},
+                status="failed",
+                order_id=order.shopify_order_id,
+            )
+            return self.env["stock.picking"]
+
+        picking_type = warehouse.in_type_id
+        if not picking_type:
+            return self.env["stock.picking"]
+
+        qty_by_product = {}
+        sale_line_by_product = {}
+        for picking in done_pickings:
+            for move in picking.move_ids:
+                if not move.product_id:
+                    continue
+                qty_by_product[move.product_id] = (
+                    qty_by_product.get(move.product_id, 0.0) + move.product_uom_qty
+                )
+                if move.sale_line_id and move.product_id not in sale_line_by_product:
+                    sale_line_by_product[move.product_id] = move.sale_line_id
+        if not qty_by_product:
+            return self.env["stock.picking"]
+
+        picking = self.env["stock.picking"].create(
+            {
+                "picking_type_id": picking_type.id,
+                "location_id": picking_type.default_location_src_id.id,
+                "location_dest_id": picking_type.default_location_dest_id.id,
+                "origin": origin,
+                "sale_id": order.id,
+            }
+        )
+        for product, qty in qty_by_product.items():
+            if qty <= 0:
+                continue
+            sale_line = sale_line_by_product.get(product)
+            self.env["stock.move"].create(
+                {
+                    "product_id": product.id,
+                    "product_uom_qty": qty,
+                    "product_uom": product.uom_id.id,
+                    "picking_id": picking.id,
+                    "location_id": picking_type.default_location_src_id.id,
+                    "location_dest_id": picking_type.default_location_dest_id.id,
+                    "sale_line_id": sale_line.id if sale_line else False,
+                }
+            )
+        if store.refund_restock_validate:
+            picking.action_confirm()
+            picking.action_assign()
+            for move in picking.move_ids:
+                move.quantity = move.product_uom_qty
+            picking.button_validate()
+
+        self._log(
+            store,
+            _(
+                "Return picking %s created for Shopify order %s (delivery already "
+                "done at cancel/refund time)."
+            )
+            % (picking.name, order.name),
+            {"picking_id": picking.id, "reason": reason},
+            order_id=order.shopify_order_id,
+        )
+        return picking

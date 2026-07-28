@@ -22,3 +22,7 @@ from . import test_p567_financial
 from . import test_p4_fulfillment
 from . import test_p3_polling
 from . import test_p1_webhook
+from . import test_public_category_collection_sync
+from . import test_wp_ab_payment_update_stock_gate
+from . import test_wp_cdefghj
+from . import test_wp_i_archive_reopen

@@ -47,3 +47,5 @@ from . import product_template
 from . import shopify_extra_models
 from . import shopify_product_field_state
 from . import trial_popup_wizard
+from . import shopify_public_category_map
+from . import shopify_public_category_sync_wizard

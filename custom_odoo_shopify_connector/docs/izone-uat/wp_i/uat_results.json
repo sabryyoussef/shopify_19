@@ -1,0 +1,79 @@
+{
+  "when": "2026-07-28T17:10:09.639703Z",
+  "module": {
+    "name": "custom_odoo_shopify_connector",
+    "latest_version": "19.0.1.9.0",
+    "state": "installed"
+  },
+  "cases": [
+    {
+      "case": "archive",
+      "so_id": 430,
+      "so_name": "S00357",
+      "shopify_order_id": "wpi-uat-arch-1785258609",
+      "state_before": "sale",
+      "state_after": "sale",
+      "shopify_is_archived": true,
+      "shopify_archived_at": "2026-07-28 17:00:00",
+      "ok": true
+    },
+    {
+      "case": "unarchive",
+      "so_id": 430,
+      "so_name": "S00357",
+      "shopify_is_archived": false,
+      "state": "sale",
+      "ok": true
+    },
+    {
+      "case": "reopen",
+      "so_id": 431,
+      "so_name": "S00358",
+      "shopify_order_id": "wpi-uat-reopen-1785258610",
+      "state_before_reopen_signal": "cancel",
+      "state_after": "cancel",
+      "pending_review": true,
+      "activity_ids": [
+        43
+      ],
+      "activity_count": 1,
+      "chatter_hits": 1,
+      "ok": true
+    },
+    {
+      "case": "replacement",
+      "original_id": 431,
+      "original_name": "S00358",
+      "original_state": "cancel",
+      "replacement_id": 432,
+      "replacement_name": "S00359",
+      "replacement_state": "draft",
+      "duplicate_blocked": true,
+      "ok": true
+    },
+    {
+      "case": "mark_reviewed",
+      "so_id": 431,
+      "pending_after": false,
+      "state": "cancel",
+      "ok": true
+    }
+  ],
+  "store": {
+    "id": 1,
+    "name": "Pet Spot",
+    "shop_url": "https://ucbah1-5e.myshopify.com",
+    "sync_archive_status": true,
+    "sync_reopen_manual_review": true,
+    "reopen_activity_user_id": 1
+  },
+  "all_ok": true,
+  "screenshot_targets": {
+    "archived_so_id": 430,
+    "archived_so_name": "S00357",
+    "reopen_so_id": 431,
+    "reopen_so_name": "S00358",
+    "replacement_so_id": 432,
+    "replacement_so_name": "S00359"
+  }
+}

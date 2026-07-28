@@ -9,3 +9,5 @@ from . import fulfillment_service
 from . import shipping_service
 from . import payment_fee_service
 from . import refund_sync_service
+from . import order_archive_reopen_service
+from . import public_category_collection_service

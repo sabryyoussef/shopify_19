@@ -6,6 +6,7 @@ from .license_mixin import license_is_active_strict
 from ..services.order_service import OrderService
 from ..services.order_import_service import OrderImportService
 from ..services.order_update_service import OrderUpdateService
+from ..services.order_archive_reopen_service import OrderArchiveReopenService
 from ..services.fulfillment_service import ShopifyFulfillmentService
 from ..services.retry_policy import classify_exception, next_retry_at
 from ..services import lifecycle_logger as llog
@@ -320,6 +321,13 @@ class ShopifyOrderQueue(models.Model):
             if new_order:
                 trace.bind(so=new_order.name)
                 trace.step(llog.STEP_SO_CREATED, so=new_order.name)
+                OrderArchiveReopenService(self.env).apply_from_payload(
+                    store,
+                    new_order,
+                    payload,
+                    correlation_id=trace.correlation_id if trace else None,
+                    trace=trace,
+                )
             return (True, _("Order created/imported."))
 
         # effective == UPDATE
@@ -343,11 +351,33 @@ class ShopifyOrderQueue(models.Model):
                     so=new_order.name,
                     msg="update-for-unknown-order imported as new",
                 )
+                OrderArchiveReopenService(self.env).apply_from_payload(
+                    store,
+                    new_order,
+                    payload,
+                    correlation_id=trace.correlation_id if trace else None,
+                    trace=trace,
+                )
             return (True, _("Update received for not-yet-imported order; imported as new."))
 
-        # Existing order + update -> route to the update sync service.
-        # This never re-runs the create workflow (no duplicate invoice/payment).
+        # Existing order + update -> archive/reopen metadata first (safe, always),
+        # then line/header sync, then financial follow-up.
+        # Archive/reopen must run even when OrderUpdateService is blocked
+        # (e.g. cancelled SO), because those flags are metadata-only.
+        OrderArchiveReopenService(self.env).apply_from_payload(
+            store,
+            existing,
+            payload,
+            correlation_id=trace.correlation_id if trace else None,
+            trace=trace,
+        )
         update_service.update_order_from_payload(existing, payload, store, trace=trace)
+        import_service.sync_financials_on_update(
+            existing,
+            store,
+            payload,
+            correlation_id=trace.correlation_id if trace else None,
+        )
         return (True, _("Existing order %s updated via update sync.") % existing.name)
 
     @api.model

@@ -199,6 +199,18 @@ class RefundSyncService:
             )
         return credit
 
+    def _maybe_return_after_full_reversal(self, store, order, credit, note=None):
+        """WP-C: after a full credit-note reversal (refund or cancel), create a
+        return picking for any already-delivered (DONE) outgoing pickings, per
+        ``refund_restock_mode``. No-op for credit_note_only or nothing shipped."""
+        if not credit or (store.refund_restock_mode or "credit_note_only") == "credit_note_only":
+            return self.env["stock.picking"]
+        from .return_picking_service import ReturnPickingService
+
+        return ReturnPickingService(self.env).create_return_for_cancelled_order(
+            store, order, note
+        )
+
     def sync_refund_from_webhook(self, store, order, refund_payload):
         refund_id = str(refund_payload.get("id") or "")
         if self._refund_already_processed(refund_id):
@@ -220,10 +232,16 @@ class RefundSyncService:
 
         if mode == "full" or not refund_line_items:
             credit = self._create_full_reversal(store, order, invoice, refund_payload)
+            self._maybe_return_after_full_reversal(
+                store, order, credit, refund_payload.get("note")
+            )
         else:
             mapped = self._map_refund_lines(order, refund_line_items)
             if not mapped:
                 credit = self._create_full_reversal(store, order, invoice, refund_payload)
+                self._maybe_return_after_full_reversal(
+                    store, order, credit, refund_payload.get("note")
+                )
             else:
                 credit = self._create_partial_credit_note(
                     store, order, invoice, refund_payload, mapped
@@ -296,6 +314,16 @@ class RefundSyncService:
 
         # CN only if posted invoice exists
         self.sync_cancel_reversal(store, order, cancel_reason)
+
+        # WP-C: goods already shipped (outgoing picking DONE) must come back
+        # into stock per refund_restock_mode, independent of whether a credit
+        # note/invoice exists for this cancellation.
+        if (store.refund_restock_mode or "credit_note_only") != "credit_note_only":
+            from .return_picking_service import ReturnPickingService
+
+            ReturnPickingService(self.env).create_return_for_cancelled_order(
+                store, order, cancel_reason
+            )
 
         if order.state != "cancel":
             try:

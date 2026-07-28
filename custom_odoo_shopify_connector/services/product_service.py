@@ -2198,4 +2198,17 @@ class ProductService:
                     error="metafield_export_failed: %s" % (metafield_sync_error or "unknown"),
                     level="warning",
                 )
+
+            # Keep website-category collection memberships in sync when mappings exist.
+            try:
+                self.env["shopify.public.category.service"].sync_product_memberships(
+                    store, product_tmpl
+                )
+            except Exception as categ_exc:
+                _logger.warning(
+                    "Public category membership sync skipped/failed for product=%s: %s",
+                    product_tmpl.display_name,
+                    categ_exc,
+                )
+
             return {"shopify_product_id": shopify_id, "created": created}
