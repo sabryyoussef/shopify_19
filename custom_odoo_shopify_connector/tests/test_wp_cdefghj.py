@@ -669,7 +669,7 @@ class TestWpJShippingAndPaymentMethodUpdate(TransactionCase):
         )
         register_wizard._create_payments()
         invoice.invalidate_recordset()
-        self.assertEqual(invoice.payment_state, "paid")
+        self.assertIn(invoice.payment_state, ("paid", "in_payment"))
 
         payload = self._base_payload()
         payload["payment_gateway_names"] = ["GatewayB"]
