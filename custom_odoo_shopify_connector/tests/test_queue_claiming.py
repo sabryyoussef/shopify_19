@@ -25,7 +25,7 @@ class TestQueueClaiming(TransactionCase):
 
         claimed = Queue._claim_pending_queues(limit=1)
         self.assertEqual(len(claimed), 1)
-        claimed.invalidate_cache(["state"])
+        claimed.invalidate_recordset(["state"])
         self.assertEqual(claimed[0].state, "processing")
 
         # Only one should be processing; one still pending; done stays done
@@ -101,8 +101,8 @@ class TestQueueClaiming(TransactionCase):
         ):
             Queue.process_queue(limit=50)
 
-        failing_queue.invalidate_cache(["state", "log_message"])
-        succeeding_queue.invalidate_cache(["state", "log_message"])
+        failing_queue.invalidate_recordset(["state", "log_message"])
+        succeeding_queue.invalidate_recordset(["state", "log_message"])
         self.assertEqual(failing_queue.state, "failed")
         self.assertEqual(succeeding_queue.state, "done")
         self.assertEqual(succeeding_queue.log_message, "Processed successfully")

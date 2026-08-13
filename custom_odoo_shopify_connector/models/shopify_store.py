@@ -54,6 +54,83 @@ class ShopifyStore(models.Model):
         string="Delivery Product",
         help="Product used when creating shipping lines from Shopify orders.",
     )
+    payment_fee_product_id = fields.Many2one(
+        "product.product",
+        string="Default Payment Fee Product",
+        help="Fallback product for payment fee lines when the gateway has none configured.",
+    )
+    refund_sync_mode = fields.Selection(
+        [
+            ("line_level", "Line-Level Partial Refunds"),
+            ("full", "Full Invoice Reversal"),
+        ],
+        string="Refund Sync Mode",
+        default="line_level",
+        help="How Shopify refunds are converted to Odoo credit notes.",
+    )
+    cancel_sync_mode = fields.Selection(
+        [
+            ("credit_note", "Create Credit Note Then Cancel"),
+            ("cancel_only", "Cancel Order Only"),
+        ],
+        string="Cancel Sync Mode",
+        default="credit_note",
+        help="When a Shopify order is cancelled after invoicing, create a credit note before cancelling.",
+    )
+    order_edit_sync_mode = fields.Selection(
+        [
+            ("ignore", "Ignore Shopify Edits"),
+            ("draft_sent", "Sync Draft and Sent Orders"),
+            ("confirmed", "Sync Until Invoiced"),
+            ("with_adjustments", "Sync With Credit Note Adjustments"),
+        ],
+        string="Order Edit Sync Mode",
+        default="draft_sent",
+        help="How Shopify order edits (orders/updated) are applied to existing Odoo sale orders.",
+    )
+    partial_payment_mode = fields.Selection(
+        [
+            ("register_paid_amount", "Register Shopify Paid Amount"),
+            ("skip_until_paid", "Skip Payment Until Fully Paid"),
+        ],
+        string="Partial Payment Mode",
+        default="register_paid_amount",
+        help="How partially_paid Shopify orders register payments in Odoo.",
+    )
+    refund_restock_mode = fields.Selection(
+        [
+            ("credit_note_only", "Credit Note Only"),
+            ("odoo_restock", "Credit Note + Odoo Restock"),
+            ("both", "Credit Note + Restock (same as Odoo Restock)"),
+        ],
+        string="Refund Restock Mode",
+        default="credit_note_only",
+        help="Whether Shopify refunds also create return pickings in Odoo.",
+    )
+    refund_restock_validate = fields.Boolean(
+        string="Auto-Validate Return Pickings",
+        default=False,
+        help="If enabled, return pickings from refunds are validated automatically.",
+    )
+    default_return_warehouse_id = fields.Many2one(
+        "stock.warehouse",
+        string="Default Return Warehouse",
+        help="Warehouse used for refund restock when Shopify location is not mapped.",
+    )
+    outbound_refund_restock_type = fields.Selection(
+        [
+            ("no_restock", "No Restock"),
+            ("return", "Return"),
+            ("cancel", "Cancel"),
+        ],
+        string="Outbound Refund Restock Type",
+        default="no_restock",
+        help="restock_type sent to Shopify when pushing refunds from Odoo.",
+    )
+    order_import_start_date = fields.Datetime(
+        string="Order Import Start Date",
+        help="On first cron run, import orders created on or after this date instead of all history.",
+    )
 
     # Order import configuration
     import_order_status = fields.Selection(
@@ -107,7 +184,22 @@ class ShopifyStore(models.Model):
     )
     last_order_import_time = fields.Datetime(
         string="Last Order Import Time",
-        help="Timestamp of the last successful order fetch from Shopify (used by scheduler).",
+        help="Created-orders checkpoint: Shopify created_at of the last successfully "
+        "processed new-order polling scan.",
+    )
+    last_order_update_time = fields.Datetime(
+        string="Last Order Update Reconcile Time",
+        help="Updated-orders checkpoint: Shopify updated_at of the last successfully "
+        "processed reconciliation polling scan (UPDATE / FULFILLMENT recovery). "
+        "Kept separate from the created checkpoint so lifecycle changes to already "
+        "imported orders are not missed.",
+    )
+    poll_overlap_minutes = fields.Integer(
+        string="Polling Overlap (minutes)",
+        default=10,
+        help="Overlap window subtracted from each polling checkpoint to avoid "
+        "timestamp-boundary misses. Idempotency makes reprocessing safe. "
+        "Recommended 5-10 minutes.",
     )
 
     def _resolve_import_order_salesperson_user(self):
@@ -191,6 +283,38 @@ class ShopifyStore(models.Model):
         string="Manage Orders via Webhook",
         help="If enabled, Shopify order webhooks will be used to import and update orders.",
     )
+    webhook_base_url = fields.Char(
+        string="Webhook Callback Base URL",
+        help="Public HTTPS base URL Shopify should deliver webhooks to (e.g. "
+        "https://erp.example.com). If empty, the system 'web.base.url' is used. "
+        "Registration requires an https URL and a configured webhook secret.",
+    )
+
+    def action_shopify_webhook_plan(self):
+        """Read-only: return the desired-vs-registered webhook plan (no writes)."""
+        from ..services.webhook_registration_service import ShopifyWebhookRegistrationService
+
+        service = ShopifyWebhookRegistrationService(self.env)
+        reports = {}
+        for store in self:
+            reports[store.id] = service.plan(store)
+            _logger.info("Shopify webhook plan store=%s: %s", store.id, reports[store.id])
+        return reports
+
+    def action_shopify_webhook_register(self):
+        """Controlled live registration/repair of missing/incorrect webhooks.
+
+        Only writes to Shopify for the Test/UAT target; requires https callback +
+        configured webhook secret. Never registers Production automatically.
+        """
+        from ..services.webhook_registration_service import ShopifyWebhookRegistrationService
+
+        service = ShopifyWebhookRegistrationService(self.env)
+        reports = {}
+        for store in self:
+            reports[store.id] = service.reconcile(store, dry_run=False)
+            _logger.info("Shopify webhook register store=%s: %s", store.id, reports[store.id])
+        return reports
 
     # Update Order Shipping Status (Odoo → Shopify) scheduler
     update_shipping_sync_enabled = fields.Boolean(
@@ -208,7 +332,7 @@ class ShopifyStore(models.Model):
             ("minutes", "Minutes"),
             ("hours", "Hours"),
         ],
-        string="Interval Unit",
+        string="Shipping Interval Unit",
         default="minutes",
     )
     last_shipping_sync_time = fields.Datetime(
@@ -230,7 +354,7 @@ class ShopifyStore(models.Model):
     )
     import_shipped_orders_interval_type = fields.Selection(
         [("minutes", "Minutes"), ("hours", "Hours")],
-        string="Interval Unit",
+        string="Shipped Orders Interval Unit",
         default="minutes",
     )
     last_shipped_orders_import_time = fields.Datetime(
@@ -566,62 +690,49 @@ class ShopifyStore(models.Model):
         return self._dashboard_open_queue_drilldown("active")
 
     def import_orders_scheduler(self):
-        """Cron entry point: fetch new Shopify orders per active store and
-        enqueue them for processing based on instance configuration.
+        """Cron entry point: new-order discovery (created checkpoint).
+
+        Polling is a fallback reconciliation path. This delegates to
+        ShopifyReconciliationService so both webhook and polling converge into the
+        same lifecycle router/services (no duplicated CREATE logic here). New
+        orders are enqueued as CREATE with cursor pagination, overlap-window
+        checkpointing and idempotent dedup.
         """
-        from ..services.queue_service import _shopify_datetime
-        from ..services.order_import_service import OrderImportService
-        import json
+        from ..services.reconciliation_service import ShopifyReconciliationService
 
-        stores = self.search([("active", "=", True)])
-        import_service = OrderImportService(self.env)
+        service = ShopifyReconciliationService(self.env)
+        for store in self.search([("active", "=", True)]):
+            service.scan_created_orders(store)
 
-        for store in stores:
-            api_client = store._get_api_client()
-            params = {}
-            if store.last_order_import_time:
-                params["created_at_min"] = _shopify_datetime(store.last_order_import_time)
+    def reconcile_orders_scheduler(self):
+        """Cron entry point: reconciliation fallback for changed/existing orders.
 
-            try:
-                orders = api_client.get_orders(**params)
-            except Exception as e:
-                self.env["shopify.sync.log.mixin"].create_log(
-                    store=store,
-                    log_type="order",
-                    message=str(e),
-                    payload=False,
-                    status="failed",
-                )
-                continue
+        Uses the updated_at checkpoint (separate from created) to recover missed
+        UPDATE and FULFILLMENT events for already-imported orders. Never re-runs
+        the CREATE workflow and is not blocked by new-order import filters.
+        """
+        if not license_is_active_strict(self.env):
+            import logging
 
-            Queue = self.env["shopify.order.queue"]
-            latest_shopify_created_at = False
-            for order in orders:
-                if not import_service.should_import_order(store, order):
-                    continue
-                created_at = order.get("created_at")
-                if created_at and (
-                    not latest_shopify_created_at or created_at > latest_shopify_created_at
-                ):
-                    latest_shopify_created_at = created_at
-                Queue.create(
-                    {
-                        "store_id": store.id,
-                        "shopify_order_id": str(order.get("id") or ""),
-                        "payload": json.dumps(order),
-                        "state": "pending",
-                        "job_type": "order",
-                    }
-                )
+            logging.getLogger(__name__).warning(
+                "License inactive - cron skipped (order reconciliation)"
+            )
+            return
 
-            # Advance checkpoint only after queue records are successfully created.
-            # Use Shopify's latest order timestamp to avoid skipping ranges.
-            if latest_shopify_created_at:
-                try:
-                    checkpoint = latest_shopify_created_at.replace("T", " ").replace("Z", "")
-                    store.last_order_import_time = fields.Datetime.from_string(checkpoint)
-                except Exception:
-                    store.last_order_import_time = fields.Datetime.now()
+        from ..services.reconciliation_service import ShopifyReconciliationService
+
+        service = ShopifyReconciliationService(self.env)
+        for store in self.search([("active", "=", True)]):
+            service.scan_updated_orders(store)
+
+    def action_shopify_reconcile_now(self):
+        """Manual: run created + updated reconciliation scans for these stores."""
+        from ..services.reconciliation_service import ShopifyReconciliationService
+
+        service = ShopifyReconciliationService(self.env)
+        for store in self:
+            service.run_poll(store)
+        return True
 
     def cron_shopify_update_shipping_status(self):
         """Cron entry point: sync shipping status to Shopify for completed deliveries.
@@ -809,6 +920,33 @@ class ShopifyStore(models.Model):
             shop_url=shop_url,
             access_token=access_token,
         )
+
+    def _get_api_client_for_scheduler(self, log_type="connection"):
+        """Return an API client for cron/scheduler jobs, or None if misconfigured.
+
+        User-initiated actions should keep using ``_get_api_client`` so operators
+        get an immediate error. Scheduled jobs skip bad stores instead of failing
+        the whole cron run.
+        """
+        self.ensure_one()
+        try:
+            return self._get_api_client()
+        except UserError as err:
+            message = str(err)
+            _logger.warning(
+                "Skipping scheduled Shopify job for store %s (#%s): %s",
+                self.name,
+                self.id,
+                message,
+            )
+            self.env["shopify.sync.log.mixin"].create_log(
+                store=self,
+                log_type=log_type,
+                message=message,
+                payload=False,
+                status="failed",
+            )
+            return None
 
     def action_test_connection(self):
         for store in self:

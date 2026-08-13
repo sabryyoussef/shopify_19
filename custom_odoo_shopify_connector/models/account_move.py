@@ -65,6 +65,15 @@ class AccountMove(models.Model):
             payload = {"refund": {"notify": bool(notify), "note": refund_note or ""}}
             store = sale.shopify_instance_id
 
+            from ..services.refund_sync_service import RefundSyncService
+
+            built = RefundSyncService(self.env).build_shopify_refund_payload(move, sale)
+            if built.get("refund", {}).get("refund_line_items") or built.get("refund", {}).get("transactions"):
+                payload = built
+                if refund_note:
+                    payload["refund"]["note"] = refund_note
+                payload["refund"]["notify"] = bool(notify)
+
             self.env["shopify.sync.log.mixin"].create_log(
                 store=store,
                 log_type="order",

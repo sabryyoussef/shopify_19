@@ -1,6 +1,20 @@
+import re
 import json
 
 from odoo import _, api, fields, models
+from odoo.exceptions import UserError
+
+
+_SECRET_KEY_RE = re.compile(
+    r"(access[_\s-]?token|authorization|api[_\s-]?secret|client[_\s-]?secret|"
+    r"password|passwd|webhook[_\s-]?secret|payment[_\s-]?(?:token|credential|key)|"
+    r"x-shopify-access-token|bearer)",
+    re.IGNORECASE,
+)
+_SECRET_VALUE_RE = re.compile(
+    r"(?i)(authorization|access[_-]?token|api[_-]?secret|x-shopify-access-token)"
+    r"\s*[:=]\s*['\"]?([^\s'\",}]+)"
+)
 
 
 class ShopifySyncLog(models.Model):
@@ -21,6 +35,17 @@ class ShopifySyncLog(models.Model):
         index=True,
         help="Shopify order id related to this log entry (when applicable).",
     )
+    webhook_id = fields.Char(
+        string="Webhook ID",
+        index=True,
+        help="Shopify webhook delivery id when this log originates from a webhook.",
+    )
+    correlation_id = fields.Char(
+        string="Correlation ID",
+        index=True,
+        help="Stable id linking all lifecycle log entries for one order across "
+        "webhook, queue, sale order, invoice and payment processing.",
+    )
     product_id = fields.Many2one(
         "product.product",
         string="Product",
@@ -39,6 +64,7 @@ class ShopifySyncLog(models.Model):
             ("product", "Product"),
             ("customer", "Customer"),
             ("order", "Order"),
+            ("refund", "Refund"),
             ("inventory", "Inventory"),
             ("shipping", "Shipping"),
             ("fulfillment", "Fulfillment"),
@@ -52,8 +78,12 @@ class ShopifySyncLog(models.Model):
     payload = fields.Text()
     response = fields.Text(string="API Response", help="Raw API response or error details.")
     attempt = fields.Integer(
-        string="Attempt",
+        string="Attempt Count",
         help="Retry attempt number for this operation when applicable.",
+    )
+    last_attempt_at = fields.Datetime(
+        string="Last Attempt",
+        help="Timestamp of the latest processing/retry attempt.",
     )
     duration_ms = fields.Integer(
         string="Duration (ms)",
@@ -63,6 +93,10 @@ class ShopifySyncLog(models.Model):
         string="Error Type",
         index=True,
         help="Normalized error classification (for example: timeout, rate_limit, validation).",
+    )
+    error_message = fields.Text(
+        string="Error Message",
+        help="Human-readable error details when status is failed.",
     )
     status = fields.Selection(
         [("success", "Success"), ("failed", "Failed")],
@@ -84,10 +118,91 @@ class ShopifySyncLog(models.Model):
         help="Deprecated: use Timestamp instead.",
     )
 
+    def action_retry(self):
+        """Retry only failed logs that are tied to a webhook or queue entry."""
+        for log in self:
+            if log.status != "failed":
+                raise UserError(_("Only failed sync logs can be retried."))
+            if log.webhook_id and log.store_id:
+                event = self.env["shopify.webhook.event"].sudo().search(
+                    [
+                        ("store_id", "=", log.store_id.id),
+                        ("webhook_id", "=", log.webhook_id),
+                    ],
+                    limit=1,
+                )
+                if not event:
+                    raise UserError(_("No webhook event found for webhook id %s.") % log.webhook_id)
+                if event.status == "processing":
+                    raise UserError(_("Related webhook is already being processed."))
+                self.env["shopify.webhook.handler"].replay_webhook_event(event)
+                log.write(
+                    {
+                        "attempt": (log.attempt or 0) + 1,
+                        "last_attempt_at": fields.Datetime.now(),
+                    }
+                )
+                continue
+            if log.queue_id:
+                queue = self.env["shopify.order.queue"].sudo().browse(log.queue_id)
+                if queue.exists() and hasattr(queue, "action_retry_failed"):
+                    queue.action_retry_failed()
+                    log.write(
+                        {
+                            "attempt": (log.attempt or 0) + 1,
+                            "last_attempt_at": fields.Datetime.now(),
+                        }
+                    )
+                    continue
+            raise UserError(
+                _("This log cannot be retried (missing webhook id / queue id).")
+            )
+        return True
+
 
 class ShopifySyncLogMixin(models.AbstractModel):
     _name = "shopify.sync.log.mixin"
     _description = "Shopify Sync Log Mixin"
+
+    @api.model
+    def mask_secrets(self, value):
+        """Mask tokens/secrets in JSON/text before persisting to sync logs."""
+        if value in (None, False, ""):
+            return ""
+        text = value if isinstance(value, str) else None
+        data = None
+        if not isinstance(value, str):
+            data = value
+        else:
+            try:
+                data = json.loads(value)
+            except Exception:
+                data = None
+
+        def _mask_obj(obj):
+            if isinstance(obj, dict):
+                out = {}
+                for key, val in obj.items():
+                    if _SECRET_KEY_RE.search(str(key or "")):
+                        out[key] = "***MASKED***"
+                    else:
+                        out[key] = _mask_obj(val)
+                return out
+            if isinstance(obj, list):
+                return [_mask_obj(v) for v in obj]
+            if isinstance(obj, str) and len(obj) > 20 and _SECRET_KEY_RE.search(obj):
+                return "***MASKED***"
+            return obj
+
+        if data is not None:
+            try:
+                return json.dumps(_mask_obj(data), ensure_ascii=False, default=str)
+            except Exception:
+                pass
+
+        text = text if text is not None else str(value)
+        text = _SECRET_VALUE_RE.sub(r"\1=***MASKED***", text)
+        return text
 
     @api.model
     def _to_json_text(self, value):
@@ -95,11 +210,11 @@ class ShopifySyncLogMixin(models.AbstractModel):
         if value in (None, False, ""):
             return ""
         if isinstance(value, str):
-            return value
+            return self.mask_secrets(value)
         try:
-            return json.dumps(value, ensure_ascii=False, default=str)
+            return self.mask_secrets(json.dumps(value, ensure_ascii=False, default=str))
         except Exception:
-            return str(value)
+            return self.mask_secrets(str(value))
 
     @api.model
     def create_log(
@@ -116,6 +231,10 @@ class ShopifySyncLogMixin(models.AbstractModel):
         attempt=None,
         duration_ms=None,
         error_type=None,
+        webhook_id=None,
+        error_message=None,
+        last_attempt_at=None,
+        correlation_id=None,
     ):
         # Always use sudo to ensure that technical logging never fails with
         # AccessError for regular users or background jobs.
@@ -133,6 +252,9 @@ class ShopifySyncLogMixin(models.AbstractModel):
                 "attempt": int(attempt) if attempt else False,
                 "duration_ms": int(duration_ms) if duration_ms else False,
                 "error_type": (error_type or "").strip() or False,
+                "webhook_id": str(webhook_id) if webhook_id else False,
+                "error_message": error_message or (message if status == "failed" else False),
+                "last_attempt_at": last_attempt_at or False,
+                "correlation_id": (correlation_id or "").strip() or False,
             }
         )
-

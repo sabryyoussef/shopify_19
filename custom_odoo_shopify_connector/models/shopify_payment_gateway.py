@@ -9,6 +9,24 @@ class ShopifyPaymentGateway(models.Model):
     name = fields.Char(required=True)
     shopify_id = fields.Char(string="Shopify Gateway ID", index=True)
 
+    gateway_type = fields.Selection(
+        [
+            ("online", "Online / Prepaid (Paymob, card, wallet)"),
+            ("cod", "Cash on Delivery"),
+            ("bank", "Bank Transfer / InstaPay"),
+            ("manual", "Manual / Other"),
+            ("unknown", "Unknown"),
+        ],
+        string="Gateway Type",
+        default="unknown",
+        help=(
+            "Financial category driving invoice/payment decisioning. "
+            "Online = prepaid orders may be invoiced and paid once a successful "
+            "transaction exists. COD = confirm only; invoice on delivery, payment "
+            "on confirmed collection. Bank = InstaPay/bank transfer prepaid."
+        ),
+    )
+
     instance_id = fields.Many2one(
         "shopify.store",
         string="Shopify Store",
@@ -21,6 +39,59 @@ class ShopifyPaymentGateway(models.Model):
         "account.journal",
         string="Payment Journal",
         help="Journal used when registering Shopify payments.",
+    )
+
+    fee_percent = fields.Float(
+        string="Fee Percent",
+        default=0.0,
+        help="Percentage fee charged by this gateway (e.g. 5 for Paymob).",
+    )
+    fee_fixed = fields.Float(
+        string="Fixed Fee",
+        default=0.0,
+        help="Fixed fee amount per transaction.",
+    )
+    fee_product_id = fields.Many2one(
+        "product.product",
+        string="Fee Product",
+        help="Product used when adding payment fees as a sale order line.",
+    )
+    fee_apply_mode = fields.Selection(
+        [
+            ("line_item", "Add Line Item"),
+            ("invoice_discount", "Global Discount at Invoice"),
+            ("none", "None"),
+        ],
+        string="Fee Apply Mode",
+        default="none",
+    )
+    fee_base = fields.Selection(
+        [
+            ("subtotal", "Order Subtotal"),
+            ("order_total", "Order Total"),
+        ],
+        string="Fee Base",
+        default="subtotal",
+    )
+    # Future accounting options (default keeps current SO fee product / invoice discount behavior).
+    fee_recording_mode = fields.Selection(
+        [
+            ("current", "Current (fee product / invoice discount)"),
+            ("expense_split", "Expense split (payment + fee expense + bank net) — not yet active"),
+        ],
+        string="Fee Recording Mode",
+        default="current",
+        help="Reserved for accounting change. Default 'current' preserves existing behavior.",
+    )
+    fee_account_id = fields.Many2one(
+        "account.account",
+        string="Fee Expense Account",
+        help="Optional expense account for Paymob/gateway fees when expense_split is adopted.",
+    )
+    fee_tax_id = fields.Many2one(
+        "account.tax",
+        string="Fee Tax",
+        help="Optional tax applied on gateway fees when expense_split accounting is adopted.",
     )
 
     payment_code = fields.Char(

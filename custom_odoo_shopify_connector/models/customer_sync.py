@@ -10,7 +10,9 @@ class ShopifyCustomerSync(models.AbstractModel):
 
     @api.model
     def sync_customers(self, store):
-        api_client = store._get_api_client()
+        api_client = store._get_api_client_for_scheduler(log_type="customer")
+        if not api_client:
+            return
 
         try:
             customers = api_client.get_customers()

@@ -15,23 +15,6 @@ from ..mappers.product_mapper import ProductMapper
 from ..models.license_mixin import license_is_active_strict, trial_batch_limit
 
 _logger = logging.getLogger(__name__)
-# region agent log
-_DEBUG_LOG_PATH = "/home/kali/Downloads/custom_odoo_shopify_connector/.cursor/debug-dc140e.log"
-
-
-def _agent_log(payload):
-    try:
-        payload = dict(payload or {})
-        payload.setdefault("sessionId", "dc140e")
-        payload.setdefault("timestamp", int(__import__("time").time() * 1000))
-        with open(_DEBUG_LOG_PATH, "a", encoding="utf-8") as f:
-            f.write(json.dumps(payload, default=str) + "\n")
-    except Exception:
-        pass
-
-
-# endregion agent log
-
 
 class ProductService:
     """Business logic for importing and updating Shopify products and variants."""
@@ -113,13 +96,10 @@ class ProductService:
         return images
 
     def _find_or_create_template(self, title, product_map):
-        ProductTemplate = self.env["product.template"]
-        template = product_map.product_tmpl_id if product_map else False
-        if not template:
-            template = ProductTemplate.search([("name", "=", title)], limit=1)
-        return template
+        """Resolve template from an existing Shopify product map only."""
+        return product_map.product_tmpl_id if product_map else False
 
-    def _find_template_by_sku(self, sku):
+    def _find_template_by_sku(self, sku, store=False, shopify_product_id=None):
         sku = (sku or "").strip()
         if not sku:
             return self.env["product.template"]
@@ -127,7 +107,20 @@ class ProductService:
             [("default_code", "=", sku)],
             limit=1,
         )
-        return product.product_tmpl_id if product else self.env["product.template"]
+        template = product.product_tmpl_id if product else self.env["product.template"]
+        if not template or not store:
+            return template
+        ProductMap = self.env["shopify.product.map"]
+        owner = ProductMap.search(
+            [
+                ("store_id", "=", store.id),
+                ("product_tmpl_id", "=", template.id),
+            ],
+            limit=1,
+        )
+        if owner and str(shopify_product_id or "") != str(owner.shopify_product_id or ""):
+            return self.env["product.template"]
+        return template
 
     def _build_template_vals(self, payload, store, categ, tag_ids):
         title = payload.get("title") or ""
@@ -243,7 +236,7 @@ class ProductService:
         local_updated = self._normalize_datetime_for_compare(state.local_updated_at)
         remote_updated = self._normalize_datetime_for_compare(remote_updated_at)
         if local_updated and remote_updated and local_updated > remote_updated:
-            print(
+            _logger.debug(
                 "[shopify-sync] skip remote field=%s product=%s reason=local_newer local=%s remote=%s"
                 % (field_name, template.display_name, local_updated, remote_updated)
             )
@@ -311,7 +304,7 @@ class ProductService:
         if not license_ok:
             metafields = (metafields or [])[: trial_batch_limit() + 3]
             time.sleep(1)
-        _logger.info("++++++++=========== META SYNC DEBUG START ===========++++++++")
+        _logger.debug("Meta sync import start for template=%s", template.display_name)
         mf_by_key = {
             (mf.get("namespace"), mf.get("key")): mf
             for mf in metafields
@@ -460,7 +453,7 @@ class ProductService:
                 )
 
         if vals:
-            print(
+            _logger.debug(
                 "[shopify-sync] applying custom fields from Shopify product=%s fields=%s"
                 % (template.display_name, sorted(vals.keys()))
             )
@@ -478,161 +471,18 @@ class ProductService:
                 field_name = mf.get("key")
                 value = mf.get("value")
                 mf_type = mf.get("type")
-                # region agent log
-                _agent_log(
-                    {
-                        "runId": "pre-fix",
-                        "hypothesisId": "IMP_ENTRY",
-                        "location": "services/product_service.py:_apply_custom_metafields_to_template:entry",
-                        "message": "import_meta_entry",
-                        "data": {
-                            "field": field_name,
-                            "mf_type": mf_type,
-                            "value_py_type": type(value).__name__,
-                            "value_preview": str(value)[:160] if value is not None else None,
-                        },
-                    }
-                )
-                # endregion agent log
-                _logger.info(
-                    "[IMPORT META] Field=%s Value=%s Type=%s",
-                    field_name,
-                    str(value)[:100],
-                    mf_type,
-                )
-                if not field_name:
-                    continue
-
-                # --------------------------------------------------
-                # STRICT NORMALIZATION (Shopify → Odoo)
-                # --------------------------------------------------
-
-                # JSON → decode
-                if mf_type == "json":
-                    try:
-                        value = json.loads(value)
-                        # region agent log
-                        _agent_log(
-                            {
-                                "runId": "pre-fix",
-                                "hypothesisId": "IMP_JSON",
-                                "location": "services/product_service.py:_apply_custom_metafields_to_template:json_loads_ok",
-                                "message": "import_meta_branch",
-                                "data": {
-                                    "field": field_name,
-                                    "branch": "json_loads_ok",
-                                    "decoded_type": type(value).__name__,
-                                },
-                            }
-                        )
-                        # endregion agent log
-                    except Exception:
-                        # region agent log
-                        _agent_log(
-                            {
-                                "runId": "pre-fix",
-                                "hypothesisId": "IMP_JSON",
-                                "location": "services/product_service.py:_apply_custom_metafields_to_template:json_loads_fail",
-                                "message": "import_meta_exception",
-                                "data": {"field": field_name, "branch": "json_loads_fail"},
-                            }
-                        )
-                        # endregion agent log
-                        pass
-
-                # BOOLEAN
-                if value in ("true", "false"):
-                    value = True if value == "true" else False
-                    # region agent log
-                    _agent_log(
-                        {
-                            "runId": "pre-fix",
-                            "hypothesisId": "IMP_BOOL",
-                            "location": "services/product_service.py:_apply_custom_metafields_to_template:boolean",
-                            "message": "import_meta_branch",
-                            "data": {"field": field_name, "branch": "boolean", "value": value},
-                        }
-                    )
-                    # endregion agent log
-
-                # NUMBER
+                                # NUMBER
                 if isinstance(value, str) and value.replace(".", "", 1).isdigit():
                     value = float(value)
-                    # region agent log
-                    _agent_log(
-                        {
-                            "runId": "pre-fix",
-                            "hypothesisId": "IMP_NUM",
-                            "location": "services/product_service.py:_apply_custom_metafields_to_template:number",
-                            "message": "import_meta_branch",
-                            "data": {"field": field_name, "branch": "number", "value": value},
-                        }
-                    )
-                    # endregion agent log
-
-                # LIST JSON → convert to IDs if needed
+                                    # LIST JSON → convert to IDs if needed
                 if isinstance(value, list):
                     try:
                         value = [(6, 0, [int(v) for v in value if str(v).isdigit()])]
-                        # region agent log
-                        _agent_log(
-                            {
-                                "runId": "pre-fix",
-                                "hypothesisId": "IMP_LIST",
-                                "location": "services/product_service.py:_apply_custom_metafields_to_template:list_m2m_ok",
-                                "message": "import_meta_branch",
-                                "data": {
-                                    "field": field_name,
-                                    "branch": "list_m2m_ok",
-                                    "ids_len": len(value[0][2]) if value and value[0] and len(value[0]) > 2 else 0,
-                                },
-                            }
-                        )
-                        # endregion agent log
                     except Exception:
-                        # region agent log
-                        _agent_log(
-                            {
-                                "runId": "pre-fix",
-                                "hypothesisId": "IMP_LIST",
-                                "location": "services/product_service.py:_apply_custom_metafields_to_template:list_m2m_fail",
-                                "message": "import_meta_exception",
-                                "data": {"field": field_name, "branch": "list_m2m_fail"},
-                            }
-                        )
-                        # endregion agent log
                         pass
                 # FILE reference → keep as is
                 elif mf_type == "file_reference":
-                    # region agent log
-                    _agent_log(
-                        {
-                            "runId": "pre-fix",
-                            "hypothesisId": "IMP_FILE_REF",
-                            "location": "services/product_service.py:_apply_custom_metafields_to_template:file_reference",
-                            "message": "import_meta_branch",
-                            "data": {"field": field_name, "branch": "file_reference"},
-                        }
-                    )
-                    # endregion agent log
                     pass
-
-                # region agent log
-                _agent_log(
-                    {
-                        "runId": "pre-fix",
-                        "hypothesisId": "IMP_EXIT",
-                        "location": "services/product_service.py:_apply_custom_metafields_to_template:pre_write",
-                        "message": "import_meta_pre_write",
-                        "data": {
-                            "field": field_name,
-                            "final_py_type": type(value).__name__,
-                            "final_preview": str(value)[:160] if value is not None else None,
-                            "will_write": bool(field_name and hasattr(template, field_name)),
-                        },
-                    }
-                )
-                # endregion agent log
                 if hasattr(template, field_name):
                     template.write({field_name: value})
                 else:
@@ -641,7 +491,7 @@ class ProductService:
                         field_name,
                     )
         finally:
-            _logger.info("++++++++=========== META SYNC DEBUG END ===========++++++++")
+            _logger.debug("Meta sync import finished for template=%s", template.display_name)
 
     def _upsert_template(self, template, template_vals):
         ProductTemplate = self.env["product.template"]
@@ -855,6 +705,30 @@ class ProductService:
                 return variant
         return self.env["product.product"]
 
+    def _prune_non_shopify_variants(self, template, variant_rows, shopify_product_id=None):
+        """Drop Odoo variants auto-generated by attribute cartesian expansion but absent in Shopify."""
+        if not template or not variant_rows:
+            return 0
+        imported = self.env["product.product"]
+        for row in variant_rows:
+            variant = row.get("variant")
+            if variant:
+                imported |= variant
+        if not imported:
+            return 0
+        extra = template.product_variant_ids - imported
+        if not extra:
+            return 0
+        count = len(extra)
+        _logger.debug(
+            "Pruning %s extra Odoo variant(s) not in Shopify import | shopify_product=%s template=%s",
+            count,
+            shopify_product_id,
+            template.id,
+        )
+        extra.unlink()
+        return count
+
     def _shopify_price_to_odoo_tax_excluded(self, template, raw_price, product=False, store=False):
         """Convert Shopify tax-included price to tax-excluded using Odoo tax engine."""
         price_included = self._to_float(raw_price, default=0.0)
@@ -874,7 +748,7 @@ class ProductService:
                 limit=1,
             )
         if not taxes:
-            print(
+            _logger.debug(
                 "[shopify-sync][price-debug] template=%s product=%s raw_price=%s included=%s taxes=[] excluded=%s reason=no_taxes"
                 % (
                     template.display_name,
@@ -895,7 +769,7 @@ class ProductService:
                 partner=False,
             )
             excluded = self._to_float(tax_res.get("total_excluded"), default=price_included)
-            _logger.info(
+            _logger.debug(
                 "Shopify pricing map | template=%s product=%s raw_included=%s tax_excluded=%s taxes=%s",
                 template.display_name,
                 getattr(product, "display_name", False) or "n/a",
@@ -903,7 +777,7 @@ class ProductService:
                 excluded,
                 taxes.mapped("name"),
             )
-            print(
+            _logger.debug(
                 "[shopify-sync][price-debug] template=%s product=%s raw_price=%s included=%s taxes=%s excluded=%s tax_breakdown=%s"
                 % (
                     template.display_name,
@@ -917,7 +791,7 @@ class ProductService:
             )
             return excluded
         except Exception:
-            print(
+            _logger.debug(
                 "[shopify-sync][price-debug] template=%s product=%s raw_price=%s included=%s excluded=%s reason=compute_failed"
                 % (
                     template.display_name,
@@ -973,7 +847,7 @@ class ProductService:
                     }
                 )
 
-        _logger.info(
+        _logger.debug(
             "Variant validation | shopify_product=%s template=%s shopify=%s odoo=%s missing=%s shopify_skus=%s odoo_skus=%s price_mismatch=%s",
             shopify_product_id,
             template.id,
@@ -1082,7 +956,7 @@ class ProductService:
         barcode = variant_payload.get("barcode") or False
         weight = variant_payload.get("weight")
         shopify_variant_id = variant_payload.get("id")
-        print(
+        _logger.debug(
             "[shopify-sync][variant-debug] begin template=%s shopify_variant_id=%s sku=%s options=(%s,%s,%s) ptav_ids=%s"
             % (
                 template.display_name,
@@ -1105,20 +979,32 @@ class ProductService:
                 limit=1,
             )
             if vmap and vmap.product_id and vmap.product_id.exists():
-                variant = vmap.product_id
-                print(
-                    "[shopify-sync][variant-debug] matched_by=map shopify_variant_id=%s odoo_variant_id=%s odoo_sku=%s"
-                    % (
-                        shopify_variant_id,
-                        variant.id,
-                        variant.default_code or "",
+                mapped = vmap.product_id
+                if mapped.product_tmpl_id == template:
+                    variant = mapped
+                    _logger.debug(
+                        "[shopify-sync][variant-debug] matched_by=map shopify_variant_id=%s odoo_variant_id=%s odoo_sku=%s"
+                        % (
+                            shopify_variant_id,
+                            variant.id,
+                            variant.default_code or "",
+                        )
                     )
-                )
+                else:
+                    _logger.debug(
+                        "[shopify-sync][variant-debug] ignored_cross_template_map shopify_variant_id=%s mapped_odoo_variant_id=%s mapped_template=%s target_template=%s"
+                        % (
+                            shopify_variant_id,
+                            mapped.id,
+                            mapped.product_tmpl_id.id,
+                            template.id,
+                        )
+                    )
 
         if not variant:
             variant = self._find_variant_by_ptav_ids(template, ptav_ids or [])
             if variant:
-                print(
+                _logger.debug(
                     "[shopify-sync][variant-debug] matched_by=ptav shopify_variant_id=%s odoo_variant_id=%s odoo_sku=%s"
                     % (
                         shopify_variant_id,
@@ -1133,7 +1019,7 @@ class ProductService:
                     limit=1,
                 )
                 if variant:
-                    print(
+                    _logger.debug(
                         "[shopify-sync][variant-debug] matched_by=sku shopify_variant_id=%s sku=%s odoo_variant_id=%s"
                         % (shopify_variant_id, sku, variant.id)
                     )
@@ -1164,19 +1050,19 @@ class ProductService:
                     raise
                 variant.write(variant_vals)
                 action = "updated"
-            print(
+            _logger.debug(
                 "[shopify-sync][variant-debug] action=created shopify_variant_id=%s sku=%s odoo_variant_id=%s"
                 % (shopify_variant_id, sku or "", variant.id)
             )
         else:
             variant.write(variant_vals)
-            print(
+            _logger.debug(
                 "[shopify-sync][variant-debug] action=updated shopify_variant_id=%s sku=%s odoo_variant_id=%s"
                 % (shopify_variant_id, sku or "", variant.id)
             )
 
         resolved_attrs = self.env["product.template.attribute.value"].browse(ptav_ids or []).mapped("name")
-        _logger.info(
+        _logger.debug(
             "Variant import -> SKU=%s, attrs=%s, action=%s, option1=%s, option2=%s, option3=%s",
             sku or "",
             resolved_attrs,
@@ -1426,7 +1312,7 @@ class ProductService:
                 source="odoo",
                 local_updated_at=local_ts,
             )
-        print(
+        _logger.debug(
             "[shopify-sync] marked odoo field states product=%s count=%s"
             % (product_tmpl.display_name, len(field_names))
         )
@@ -1681,11 +1567,13 @@ class ProductService:
         )
 
         template = self._find_or_create_template(title, product_map)
-        if not template:
-            first_sku = ""
-            if variants and isinstance(variants[0], dict):
-                first_sku = variants[0].get("sku") or ""
-            template = self._find_template_by_sku(first_sku)
+        first_sku = ""
+        if variants and isinstance(variants[0], dict):
+            first_sku = variants[0].get("sku") or ""
+        if not template and first_sku:
+            template = self._find_template_by_sku(
+                first_sku, store=store, shopify_product_id=shopify_product_id
+            )
             if template:
                 _logger.info(
                     "Shopify product import matched existing template by SKU | product_id=%s sku=%s template_id=%s",
@@ -1694,11 +1582,11 @@ class ProductService:
                     template.id,
                 )
         shopify_updated = self._parse_shopify_datetime(payload.get("updated_at"))
-        print(
+        _logger.debug(
             "[shopify-sync] import product id=%s updated_at=%s"
             % (shopify_product_id, payload.get("updated_at"))
         )
-        print(
+        _logger.debug(
             "[shopify-sync][variant-debug] payload_variant_count=%s payload_skus=%s"
             % (
                 len(variants),
@@ -1709,8 +1597,7 @@ class ProductService:
                 ],
             )
         )
-        print("=====================here is all about variants=====================")
-        print(
+        _logger.debug(
             "[shopify-sync][variant-debug] block_start product_id=%s template=%s variants=%s"
             % (shopify_product_id, title or "n/a", len(variants))
         )
@@ -1763,7 +1650,7 @@ class ProductService:
             self._upsert_variant_map(
                 VariantMap, store, shopify_product_id, variant_payload, variant
             )
-            print(
+            _logger.debug(
                 "[shopify-sync][variant-debug] mapped shopify_variant_id=%s -> odoo_variant_id=%s sku=%s"
                 % (
                     variant_payload.get("id"),
@@ -1774,6 +1661,9 @@ class ProductService:
             variant_rows.append({"payload": variant_payload, "variant": variant})
 
         self._apply_variant_price_model(template, variant_rows, store=store)
+        self._prune_non_shopify_variants(
+            template, variant_rows, shopify_product_id=shopify_product_id
+        )
         validation_data = self._log_variant_import_validation(
             template, variant_rows, shopify_product_id=shopify_product_id, store=store
         )
@@ -1782,18 +1672,17 @@ class ProductService:
             shopify_product_id=shopify_product_id,
             template=template,
         )
-        print(
+        _logger.debug(
             "[shopify-sync][variant-debug] final_odoo_variant_count=%s final_odoo_skus=%s"
             % (
                 len(template.product_variant_ids),
                 [sku for sku in template.product_variant_ids.mapped("default_code") if sku],
             )
         )
-        print(
+        _logger.debug(
             "[shopify-sync][variant-debug] block_end product_id=%s template=%s"
             % (shopify_product_id, template.display_name)
         )
-        print("======================finish variants log======================")
 
         # Import custom addon fields from Shopify metafields when available.
         try:
@@ -1963,7 +1852,7 @@ class ProductService:
                     )
                     odoo_updated = product_tmpl.write_date
                     if shopify_updated and odoo_updated:
-                        print(
+                        _logger.debug(
                             "[shopify-sync] export conflict check product=%s shopify_updated=%s odoo_updated=%s"
                             % (product_tmpl.display_name, shopify_updated, odoo_updated)
                         )
@@ -1977,7 +1866,7 @@ class ProductService:
                 shopify_id=existing_id,
                 variants=len(product_data.get("variants") or []),
             )
-            _logger.info(
+            _logger.debug(
                 "Export variants count=%s SKUs=%s",
                 len(product_data.get("variants") or []),
                 [
@@ -1985,7 +1874,7 @@ class ProductService:
                     for variant in (product_data.get("variants") or [])
                 ],
             )
-            _logger.info(
+            _logger.debug(
                 "Shopify export payload variants=%s",
                 product_data.get("variants") or [],
             )
@@ -2168,7 +2057,7 @@ class ProductService:
                 if not license_is_active_strict(self.env):
                     custom_metafields = (custom_metafields or [])[: trial_batch_limit() + 1]
                     time.sleep(1)
-                print(
+                _logger.debug(
                     "[shopify-sync] exporting custom metafields product=%s count=%s"
                     % (product_tmpl.display_name, len(custom_metafields or []))
                 )

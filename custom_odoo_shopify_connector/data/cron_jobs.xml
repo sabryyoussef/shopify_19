@@ -45,13 +45,26 @@
         <field name="active">True</field>
     </record>
 
-    <!-- Import Shopify Orders into queue every 30 minutes -->
+    <!-- Import Shopify Orders into queue every 30 minutes (new-order discovery) -->
     <record id="ir_cron_shopify_import_orders" model="ir.cron">
         <field name="name">Import Shopify Orders</field>
         <field name="model_id" ref="model_shopify_store"/>
         <field name="state">code</field>
         <field name="code">model.import_orders_scheduler()</field>
         <field name="interval_number">30</field>
+        <field name="interval_type">minutes</field>
+        <field name="active">True</field>
+    </record>
+
+    <!-- Reconcile Shopify Orders (fallback: missed UPDATE/FULFILLMENT recovery).
+         Uses the separate updated_at checkpoint so lifecycle changes to already
+         imported orders are recovered when a webhook is missed/delayed. -->
+    <record id="ir_cron_shopify_reconcile_orders" model="ir.cron">
+        <field name="name">Reconcile Shopify Orders</field>
+        <field name="model_id" ref="model_shopify_store"/>
+        <field name="state">code</field>
+        <field name="code">model.reconcile_orders_scheduler()</field>
+        <field name="interval_number">15</field>
         <field name="interval_type">minutes</field>
         <field name="active">True</field>
     </record>

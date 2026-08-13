@@ -1,0 +1,15 @@
+{
+  "server": "izone",
+  "project_id": 12,
+  "parent_wp_id": 170,
+  "parent_subject": "izone_azone_parent",
+  "subject_prefix": "[iZone]",
+  "commit": {
+    "sha": "dbef3fe8110a192d7afb88179d1a5c0bbf32dbef",
+    "subject": "chore(baseline): snapshot pre-existing uncommitted work before P8/P2",
+    "author": "shopify-impl <impl@localhost>",
+    "branch": "--abbrev-ref HEAD",
+    "files": ".op-sync/done/6a643c67ba69c364d4a597d86eeae708d76fabc1.json\n.op-sync/done/b2d1823ab4a6c6be0555c5db13d858bb906fa2d2.json\n.op-sync/post-commit-hook.sh\n.op-sync/queue-commit.py\n.op-sync/queue/60bf39399bdd0d11426e47d027afe4c8d0822274.json\ncustom_odoo_shopify_connector/__manifest__.py\ncustom_odoo_shopify_connector/controllers/shopify_webhook.py\ncustom_odoo_shopify_connector/docs/wp70/PAYMOB_FEES_ACCOUNTING_OPTIONS.md\ncustom_odoo_shopify_connector/docs/wp70/SHOPIFY_AUDIT_REMEDIATION_FINAL_REPORT.md\ncustom_odoo_shopify_connector/docs/wp70/SHOPIFY_UAT_CHECKLIST.md\ncustom_odoo_shopify_connector/models/sale_order.py\ncustom_odoo_shopify_connector/models/shopify_exchange_wizard.py\ncustom_odoo_shopify_connector/models/shopify_payment_gateway.py\ncustom_odoo_shopify_connector/models/shopify_queue.py\ncustom_odoo_shopify_connector/models/sync_log.py\ncustom_odoo_shopify_connector/models/webhook_handler.py\ncustom_odoo_shopify_connector/security/ir.model.access.csv\ncustom_odoo_shopify_connector/services/fulfillment_service.py\ncustom_odoo_shopify_connector/services/order_service.py\ncustom_odoo_shopify_connector/services/refund_sync_service.py\ncustom_odoo_shopify_connector/tests/__init__.py\ncustom_odoo_shopify_connector/tests/test_cancel_before_invoice.py\ncustom_odoo_shopify_connector/tests/test_checkpoint_scheduler.py\ncustom_odoo_shopify_connector/tests/test_discount_scenarios.py\ncustom_odoo_shopify_connector/tests/test_exchange_wizard.py\ncustom_odoo_shopify_connector/tests/test_idempotent_payment_and_refund.py\ncustom_odoo_shopify_connector/tests/test_queue_claiming.py\ncustom_odoo_shopify_connector/tests/test_shipping_scenarios.py\ncustom_odoo_shopify_connector/tests/test_sync_reliability.py\ncustom_odoo_shopify_connector/tests/test_webhook_replay.py\ncustom_odoo_shopify_connector/views/order_queue_view.xml\ncustom_odoo_shopify_connector/views/shopify_menu.xml\ncustom_odoo_shopify_connector/views/shopify_webhook_event_views.xml",
+    "remote": "git@github.com:sabryyoussef/shopify_19.git"
+  }
+}

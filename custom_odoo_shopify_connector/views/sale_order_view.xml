@@ -1,5 +1,66 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <record id="view_sale_order_form_shopify_timeline" model="ir.ui.view">
+        <field name="name">sale.order.form.shopify.timeline</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_open_shopify_exchange_wizard"
+                        type="object"
+                        string="Shopify Exchange"
+                        class="btn-secondary"
+                        invisible="not shopify_order_id"/>
+            </xpath>
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_view_shopify_sync_logs"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-history"
+                        invisible="not shopify_order_id">
+                    <field name="shopify_sync_log_count" widget="statinfo" string="Sync Logs"/>
+                </button>
+                <button name="action_view_shopify_credit_notes"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-undo"
+                        invisible="not shopify_order_id">
+                    <field name="shopify_credit_note_count" widget="statinfo" string="Credit Notes"/>
+                </button>
+            </xpath>
+            <xpath expr="//notebook" position="inside">
+                <page string="Shopify" invisible="not shopify_order_id">
+                    <group>
+                        <group string="Shopify Identifiers">
+                            <field name="shopify_order_id" readonly="1"/>
+                            <field name="shopify_instance_id" readonly="1"/>
+                            <field name="shopify_payment_gateway" readonly="1"/>
+                            <field name="shopify_fulfillment_status" readonly="1"/>
+                        </group>
+                        <group string="Payment &amp; Refunds">
+                            <field name="shopify_order_total" readonly="1"/>
+                            <field name="shopify_gateway_fee" readonly="1"/>
+                            <field name="shopify_net_received" readonly="1"/>
+                            <field name="shopify_amount_paid" readonly="1"/>
+                            <field name="shopify_refunded_amount" readonly="1"/>
+                            <field name="shopify_refunded" readonly="1"/>
+                            <field name="shopify_exchange_parent_id" readonly="1"/>
+                        </group>
+                    </group>
+                    <group string="Exchange Replacements" invisible="not shopify_exchange_child_ids">
+                        <field name="shopify_exchange_child_ids" readonly="1">
+                            <list>
+                                <field name="name"/>
+                                <field name="state"/>
+                                <field name="amount_total"/>
+                            </list>
+                        </field>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
     <record id="view_sale_order_form_shopify_cancel" model="ir.ui.view">
         <field name="name">sale.order.form.shopify.cancel</field>
         <field name="model">sale.order</field>
@@ -15,4 +76,3 @@
         </field>
     </record>
 </odoo>
-

@@ -30,6 +30,20 @@ class StockPicking(models.Model):
         help="Tracks whether shipping information for this delivery has been sent to Shopify.",
     )
 
+    shopify_fulfillment_origin = fields.Selection(
+        [
+            ("odoo", "Odoo"),
+            ("shopify", "Shopify"),
+        ],
+        string="Fulfillment Origin",
+        index=True,
+        help=(
+            "Origin of this delivery's fulfillment. 'shopify' means the picking "
+            "was completed from a Shopify-originated fulfillment event; the "
+            "Odoo->Shopify shipping cron must NOT push it back (loop guard)."
+        ),
+    )
+
     shopify_fulfilled = fields.Boolean(
         string="Shopify Fulfilled",
         compute="_compute_shopify_fulfilled",
@@ -96,6 +110,16 @@ class StockPicking(models.Model):
                 continue
             if picking.shopify_fulfilled:
                 continue
+            # Loop guard: never echo a Shopify-originated fulfillment back to Shopify.
+            if picking.shopify_fulfillment_origin == "shopify":
+                from ..services import lifecycle_logger as llog
+
+                llog.LifecycleTrace(op=llog.OP_FULFILLMENT).step(
+                    llog.STEP_FULFILLMENT_PUSH_SKIPPED,
+                    status="skipped",
+                    msg="picking=%s origin=shopify (loop guard)" % picking.name,
+                )
+                continue
             sale = picking._get_shopify_sale_order()
             if not sale or not sale.shopify_order_id or not sale.shopify_instance_id:
                 continue
@@ -117,6 +141,8 @@ class StockPicking(models.Model):
             ("state", "=", "done"),
             ("shopify_fulfilled", "=", False),
             ("shopify_has_tracking", "=", True),
+            # Loop guard: exclude Shopify-originated fulfillments.
+            ("shopify_fulfillment_origin", "!=", "shopify"),
         ]
         pickings = self.search(domain)
         for picking in pickings:

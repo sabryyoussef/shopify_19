@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_shopify_webhook_event_list" model="ir.ui.view">
+        <field name="name">shopify.webhook.event.list</field>
+        <field name="model">shopify.webhook.event</field>
+        <field name="arch" type="xml">
+            <list string="Webhook Events">
+                <field name="create_date"/>
+                <field name="store_id"/>
+                <field name="topic"/>
+                <field name="webhook_id"/>
+                <field name="shopify_order_id"/>
+                <field name="status"/>
+                <field name="attempt"/>
+                <field name="last_attempt_at"/>
+                <field name="error_type"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_shopify_webhook_event_form" model="ir.ui.view">
+        <field name="name">shopify.webhook.event.form</field>
+        <field name="model">shopify.webhook.event</field>
+        <field name="arch" type="xml">
+            <form string="Webhook Event">
+                <header>
+                    <button name="action_replay"
+                            type="object"
+                            string="Replay / Reprocess"
+                            class="btn-primary"
+                            invisible="status == 'processing'"
+                            confirm="Reprocess this webhook using the shared service layer?"/>
+                    <field name="status" widget="statusbar" statusbar_visible="received,processing,processed,failed"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="store_id"/>
+                            <field name="topic"/>
+                            <field name="webhook_id"/>
+                            <field name="shopify_order_id"/>
+                            <field name="shop_domain"/>
+                        </group>
+                        <group>
+                            <field name="attempt"/>
+                            <field name="last_attempt_at"/>
+                            <field name="error_type"/>
+                            <field name="error_message"/>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="payload" nolabel="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_shopify_webhook_event" model="ir.actions.act_window">
+        <field name="name">Webhook Events</field>
+        <field name="res_model">shopify.webhook.event</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>
